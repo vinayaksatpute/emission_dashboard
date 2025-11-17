@@ -3,575 +3,501 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Supplier Sustainability Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <title>Supplier Sustainability Dashboard - Enhanced with Drill-down</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js">
+
+        // Calculate and display total emissions
+        function calculateTotalEmissions() {
+            let totalScope1 = 0;
+            let totalScope2 = 0;
+            let totalScope3 = 0;
+
+            Object.values(suppliersData).forEach(supplier => {
+                totalScope1 += supplier.scope1;
+                totalScope2 += supplier.scope2;
+                totalScope3 += supplier.scope3;
+            });
+
+            const totalEmissions = totalScope1 + totalScope2 + totalScope3;
+
+            document.getElementById('totalScope1').textContent = totalScope1.toLocaleString();
+            document.getElementById('totalScope2').textContent = totalScope2.toLocaleString();
+            document.getElementById('totalScope3').textContent = totalScope3.toLocaleString();
+            document.getElementById('totalEmissions').textContent = totalEmissions.toLocaleString();
+        }
+
+        window.addEventListener('DOMContentLoaded', calculateTotalEmissions);
+
+        let emissionsComparisonChartInstance = null;
+
+        function openEmissionsBreakdown(scopeType) {
+            const scopeTitles = {
+                'scope1': 'Scope 1 (Direct Emissions)',
+                'scope2': 'Scope 2 (Energy Indirect)',
+                'scope3': 'Scope 3 (Value Chain)',
+                'all': 'All Scopes'
+            };
+
+            document.getElementById('emissionsModalTitle').textContent = 
+                scopeType === 'all' ? 'Total Emissions Breakdown by Supplier' : scopeTitles[scopeType] + ' Breakdown by Supplier';
+            
+            document.getElementById('emissionsModalSubtitle').textContent = 
+                scopeType === 'all' ? 'Complete emissions profile across all suppliers' : 'Detailed ' + scopeTitles[scopeType].toLowerCase() + ' analysis';
+
+            const suppliersList = Object.entries(suppliersData).map(([name, data]) => ({
+                name: name,
+                scope1: data.scope1,
+                scope2: data.scope2,
+                scope3: data.scope3,
+                total: data.totalEmissions,
+                sortValue: scopeType === 'all' ? data.totalEmissions : 
+                          scopeType === 'scope1' ? data.scope1 :
+                          scopeType === 'scope2' ? data.scope2 : data.scope3
+            })).sort((a, b) => b.sortValue - a.sortValue);
+
+            const listHtml = suppliersList.map(supplier => 
+                '<div class="supplier-emissions-row" onclick="openSupplierDetail(\'' + supplier.name + '\')">' +
+                    '<div class="supplier-emissions-name">' + supplier.name + '</div>' +
+                    '<div class="supplier-emissions-value"><strong>' + supplier.scope1.toLocaleString() + '</strong> t</div>' +
+                    '<div class="supplier-emissions-value"><strong>' + supplier.scope2.toLocaleString() + '</strong> t</div>' +
+                    '<div class="supplier-emissions-value"><strong>' + supplier.scope3.toLocaleString() + '</strong> t</div>' +
+                    '<div class="supplier-emissions-value"><strong>' + supplier.total.toLocaleString() + '</strong> t</div>' +
+                '</div>'
+            ).join('');
+
+            document.getElementById('supplierEmissionsList').innerHTML = listHtml;
+
+            if (emissionsComparisonChartInstance) {
+                emissionsComparisonChartInstance.destroy();
+            }
+
+            const chartCtx = document.getElementById('emissionsComparisonChart').getContext('2d');
+            const supplierNames = suppliersList.map(s => s.name.split(' ')[0]);
+
+            if (scopeType === 'all') {
+                document.getElementById('emissionsChartTitle').textContent = 'Emissions by Supplier (All Scopes)';
+                emissionsComparisonChartInstance = new Chart(chartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: supplierNames,
+                        datasets: [
+                            {
+                                label: 'Scope 1',
+                                data: suppliersList.map(s => s.scope1),
+                                backgroundColor: '#0f5f4e'
+                            },
+                            {
+                                label: 'Scope 2',
+                                data: suppliersList.map(s => s.scope2),
+                                backgroundColor: '#17a085'
+                            },
+                            {
+                                label: 'Scope 3',
+                                data: suppliersList.map(s => s.scope3),
+                                backgroundColor: '#20c997'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true, ticks: { font: { size: 10 } } },
+                            y: { 
+                                stacked: true, 
+                                ticks: { 
+                                    callback: function(v) { return v.toLocaleString(); },
+                                    font: { size: 10 }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { 
+                                position: 'bottom',
+                                labels: { padding: 10, font: { size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' t CO2e';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else {
+                const scopeData = suppliersList.map(s => 
+                    scopeType === 'scope1' ? s.scope1 :
+                    scopeType === 'scope2' ? s.scope2 : s.scope3
+                );
+                
+                document.getElementById('emissionsChartTitle').textContent = scopeTitles[scopeType] + ' by Supplier';
+                
+                emissionsComparisonChartInstance = new Chart(chartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: supplierNames,
+                        datasets: [{
+                            label: scopeTitles[scopeType],
+                            data: scopeData,
+                            backgroundColor: scopeType === 'scope1' ? '#0f5f4e' : 
+                                           scopeType === 'scope2' ? '#17a085' : '#20c997',
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.parsed.y.toLocaleString() + ' t CO2e';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                ticks: { 
+                                    callback: function(v) { return v.toLocaleString(); },
+                                    font: { size: 10 }
+                                }
+                            },
+                            x: {
+                                ticks: { font: { size: 10 } }
+                            }
+                        }
+                    }
+                });
+            }
+
+            const totalEmissions = suppliersList.reduce((sum, s) => sum + s.total, 0);
+            const avgEmissions = Math.round(totalEmissions / suppliersList.length);
+            const highestEmitter = suppliersList[0];
+            const lowestEmitter = suppliersList[suppliersList.length - 1];
+            
+            const scopeInfo = {
+                'scope1': { desc: 'Direct emissions from owned or controlled sources', icon: '🏭', color: '#0f5f4e' },
+                'scope2': { desc: 'Indirect emissions from purchased energy', icon: '⚡', color: '#17a085' },
+                'scope3': { desc: 'All other indirect emissions in the value chain', icon: '🔗', color: '#20c997' },
+                'all': { desc: 'Complete carbon footprint across all emission categories', icon: '🌍', color: '#0f5f4e' }
+            };
+
+            const info = scopeInfo[scopeType];
+            
+            let insightsHtml = '<div class="insight-item" style="border-left-color: ' + info.color + ';">';
+            insightsHtml += '<div class="insight-icon">' + info.icon + '</div>';
+            insightsHtml += '<div class="insight-content">';
+            insightsHtml += '<div class="insight-title">' + scopeTitles[scopeType] + ' Overview</div>';
+            insightsHtml += '<div class="insight-text">' + info.desc + '</div>';
+            insightsHtml += '</div></div>';
+            
+            insightsHtml += '<div class="insight-item" style="border-left-color: #dc3545;">';
+            insightsHtml += '<div class="insight-icon">↑</div>';
+            insightsHtml += '<div class="insight-content">';
+            insightsHtml += '<div class="insight-title">Highest Emitter: ' + highestEmitter.name + '</div>';
+            insightsHtml += '<div class="insight-text">';
+            if (scopeType === 'all') {
+                insightsHtml += 'Total emissions: ' + highestEmitter.total.toLocaleString() + ' t CO2e (' + ((highestEmitter.total/totalEmissions)*100).toFixed(1) + '% of total)';
+            } else {
+                insightsHtml += scopeTitles[scopeType] + ': ' + highestEmitter.sortValue.toLocaleString() + ' t CO2e';
+            }
+            insightsHtml += '</div></div></div>';
+            
+            insightsHtml += '<div class="insight-item" style="border-left-color: #28a745;">';
+            insightsHtml += '<div class="insight-icon">↓</div>';
+            insightsHtml += '<div class="insight-content">';
+            insightsHtml += '<div class="insight-title">Lowest Emitter: ' + lowestEmitter.name + '</div>';
+            insightsHtml += '<div class="insight-text">';
+            if (scopeType === 'all') {
+                insightsHtml += 'Total emissions: ' + lowestEmitter.total.toLocaleString() + ' t CO2e (' + ((lowestEmitter.total/totalEmissions)*100).toFixed(1) + '% of total)';
+            } else {
+                insightsHtml += scopeTitles[scopeType] + ': ' + lowestEmitter.sortValue.toLocaleString() + ' t CO2e';
+            }
+            insightsHtml += '</div></div></div>';
+            
+            insightsHtml += '<div class="insight-item" style="border-left-color: #0f5f4e;">';
+            insightsHtml += '<div class="insight-icon">📊</div>';
+            insightsHtml += '<div class="insight-content">';
+            insightsHtml += '<div class="insight-title">Statistical Summary</div>';
+            insightsHtml += '<div class="insight-text">Average emissions per supplier: ' + avgEmissions.toLocaleString() + ' t CO2e | ';
+            insightsHtml += 'Total suppliers analyzed: ' + suppliersList.length + ' | ';
+            insightsHtml += 'Combined emissions: ' + totalEmissions.toLocaleString() + ' t CO2e</div>';
+            insightsHtml += '</div></div>';
+
+            if (scopeType === 'all') {
+                const scope1Total = suppliersList.reduce((s,x) => s + x.scope1, 0);
+                const scope2Total = suppliersList.reduce((s,x) => s + x.scope2, 0);
+                const scope3Total = suppliersList.reduce((s,x) => s + x.scope3, 0);
+                
+                insightsHtml += '<div class="insight-item" style="border-left-color: #17a085;">';
+                insightsHtml += '<div class="insight-icon">🎯</div>';
+                insightsHtml += '<div class="insight-content">';
+                insightsHtml += '<div class="insight-title">Scope Distribution</div>';
+                insightsHtml += '<div class="insight-text">Scope 1 represents ' + ((scope1Total/totalEmissions)*100).toFixed(1) + '%, ';
+                insightsHtml += 'Scope 2 represents ' + ((scope2Total/totalEmissions)*100).toFixed(1) + '%, ';
+                insightsHtml += 'Scope 3 represents ' + ((scope3Total/totalEmissions)*100).toFixed(1) + '% of total emissions.</div>';
+                insightsHtml += '</div></div>';
+            }
+
+            document.getElementById('emissionsInsights').innerHTML = insightsHtml;
+
+            document.getElementById('emissionsBreakdownModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEmissionsModal() {
+            document.getElementById('emissionsBreakdownModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        window.onclick = function(event) {
+            const regionalModal = document.getElementById('regionalModal');
+            const supplierModal = document.getElementById('supplierDetailModal');
+            const emissionsModal = document.getElementById('emissionsBreakdownModal');
+            
+            if (event.target == regionalModal) {
+                closeModal('regionalModal');
+            }
+            if (event.target == supplierModal) {
+                closeSupplierModal();
+            }
+            if (event.target == emissionsModal) {
+                closeEmissionsModal();
+            }
+        }
+
+    </script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            padding: 20px;
-        }
-
-        .dashboard {
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-
-        .header {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        .header h1 {
-            color: #0f5f4e;
-            font-size: 28px;
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            color: #666;
-            font-size: 14px;
-        }
-
-        .widgets-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-        }
-
-        .widget {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: transform 0.2s;
-        }
-
-        .widget:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-        }
-
-        .widget-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .widget-title-section {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex: 1;
-        }
-
-        .widget-title {
-            font-size: 18px;
-            color: #0f5f4e;
-            font-weight: 600;
-        }
-
-        .info-icon {
-            width: 20px;
-            height: 20px;
-            background: #17a085;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            cursor: help;
-            position: relative;
-        }
-
-        .info-icon:hover::after {
-            content: attr(data-info);
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #333;
-            color: white;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: normal;
-            white-space: normal;
-            width: 280px;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            line-height: 1.4;
-        }
-
-        .info-icon:hover::before {
-            content: '';
-            position: absolute;
-            bottom: 22px;
-            left: 50%;
-            transform: translateX(-50%);
-            border: 8px solid transparent;
-            border-top-color: #333;
-            z-index: 1000;
-        }
-
-        .widget-icon {
-            width: 32px;
-            height: 32px;
-            background: #0f5f4e;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-size: 16px;
-            font-weight: 700;
-        }
-
-        .supplier-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .supplier-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px;
-            background: #f9fafb;
-            border-radius: 8px;
-            border-left: 4px solid;
-        }
-
-        .supplier-name {
-            font-weight: 500;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .supplier-value {
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .badge {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; padding: 20px; }
+        .dashboard { max-width: 1600px; margin: 0 auto; }
+        .header { background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .header h1 { color: #0f5f4e; font-size: 28px; margin-bottom: 8px; }
+        .header p { color: #666; font-size: 14px; }
+        .widgets-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .widget { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.2s; }
+        .widget:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+        .widget-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #f0f0f0; }
+        .widget-title-section { display: flex; align-items: center; gap: 8px; flex: 1; }
+        .widget-title { font-size: 18px; color: #0f5f4e; font-weight: 600; }
+        .info-icon { width: 20px; height: 20px; background: #17a085; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: help; position: relative; }
+        .widget-icon { width: 32px; height: 32px; background: #0f5f4e; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: 700; }
+        .supplier-list { display: flex; flex-direction: column; gap: 12px; }
+        .supplier-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; border-left: 4px solid; cursor: pointer; transition: all 0.2s; }
+        .supplier-item:hover { background: #f0f4f3; transform: translateX(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .supplier-name { font-weight: 500; color: #333; font-size: 14px; }
+        .badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
         .badge-high { background: #fee; color: #c00; }
         .badge-medium { background: #fff3cd; color: #856404; }
-        .badge-low { background: #d4edda; color: #155724; }
         .badge-certified { background: #d1ecf1; color: #0c5460; }
-
-        .chart-container {
-            position: relative;
-            height: 250px;
-            margin-top: 15px;
-        }
-
-        .chart-clickable {
-            cursor: pointer;
-        }
-
-        .chart-clickable canvas:hover {
-            opacity: 0.9;
-        }
-
-        .click-hint {
-            text-align: center;
-            color: #17a085;
-            font-size: 11px;
-            margin-top: 8px;
-            font-style: italic;
-        }
-
-        .metric-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-top: 15px;
-        }
-
-        .metric-card {
-            background: #f9fafb;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .metric-label {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
-        }
-
-        .metric-value {
-            font-size: 20px;
-            font-weight: 700;
-            color: #0f5f4e;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 8px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #0f5f4e, #17a085);
-            transition: width 0.3s;
-        }
-
-        .ranking-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 10px;
-            background: #f9fafb;
-            border-radius: 8px;
-            margin-bottom: 8px;
-        }
-
-        .rank-number {
-            width: 30px;
-            height: 30px;
-            background: #0f5f4e;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 14px;
-        }
-
-        .rank-details {
-            flex: 1;
-        }
-
-        .rank-name {
-            font-weight: 600;
-            color: #333;
-            font-size: 14px;
-        }
-
-        .rank-score {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .trend-icon {
-            font-size: 18px;
-        }
-
+        .chart-container { position: relative; height: 250px; margin-top: 15px; }
+        .click-hint { text-align: center; color: #17a085; font-size: 11px; margin-top: 8px; font-style: italic; }
+        .metric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 15px; }
+        .metric-card { background: #f9fafb; padding: 15px; border-radius: 8px; text-align: center; }
+        .metric-label { font-size: 12px; color: #666; margin-bottom: 5px; }
+        .metric-value { font-size: 20px; font-weight: 700; color: #0f5f4e; }
+        .progress-bar { width: 100%; height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden; margin-top: 8px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #0f5f4e, #17a085); transition: width 0.3s; }
+        .ranking-item { display: flex; align-items: center; gap: 12px; padding: 10px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+        .ranking-item:hover { background: #f0f4f3; transform: translateX(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .rank-number { width: 30px; height: 30px; background: #0f5f4e; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+        .rank-details { flex: 1; }
+        .rank-name { font-weight: 600; color: #333; font-size: 14px; }
+        .rank-score { font-size: 12px; color: #666; }
+        .trend-icon { font-size: 18px; }
         .trend-up { color: #c00; }
         .trend-down { color: #28a745; }
         .trend-stable { color: #ffc107; }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0, 0, 0, 0.6); animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .modal-content { background-color: #f5f7fa; margin: 2% auto; padding: 0; width: 95%; max-width: 1400px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); animation: slideDown 0.3s; max-height: 90vh; overflow-y: auto; }
+        @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .modal-header { background: white; padding: 25px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f0f0f0; position: sticky; top: 0; z-index: 10; }
+        .modal-title-section h2 { color: #0f5f4e; font-size: 24px; margin: 0 0 5px 0; }
+        .modal-title-section p { color: #666; font-size: 14px; margin: 0; }
+        .close-button { background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .close-button:hover { background: #c82333; }
+        .modal-body { padding: 20px; }
+        .supplier-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .detail-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .detail-card-header { font-size: 16px; color: #0f5f4e; font-weight: 600; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; display: flex; align-items: center; gap: 8px; }
+        .detail-icon { width: 24px; height: 24px; background: #0f5f4e; color: white; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+        .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-label { font-size: 13px; color: #666; font-weight: 500; }
+        .detail-value { font-size: 14px; color: #333; font-weight: 600; }
+        .scope-emissions-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 15px; }
+        .scope-card { background: linear-gradient(135deg, #0f5f4e 0%, #17a085 100%); padding: 20px; border-radius: 12px; text-align: center; color: white; box-shadow: 0 4px 12px rgba(15, 95, 78, 0.3); }
+        .scope-card-label { font-size: 12px; opacity: 0.9; margin-bottom: 8px; font-weight: 500; }
+        .scope-card-value { font-size: 24px; font-weight: 700; margin-bottom: 5px; }
+        .scope-card-unit { font-size: 11px; opacity: 0.8; }
+        .scope-breakdown-list { margin-top: 15px; }
+        .scope-breakdown-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f9fafb; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+        .scope-breakdown-label { color: #666; }
+        .scope-breakdown-value { color: #0f5f4e; font-weight: 600; }
+        .status-indicator { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+        .status-indicator.good { background: #d4edda; color: #155724; }
+        .status-indicator.warning { background: #fff3cd; color: #856404; }
+        .status-indicator.critical { background: #fee; color: #c00; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+        .supplier-detail-chart { height: 250px; margin-top: 15px; }
+        .action-items { margin-top: 15px; }
+        .action-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px; background: #f9fafb; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid; }
+        .action-item.high-priority { border-left-color: #dc3545; }
+        .action-item.medium-priority { border-left-color: #ffc107; }
+        .action-item.low-priority { border-left-color: #28a745; }
+        .action-checkbox { margin-top: 2px; }
+        .action-text { flex: 1; font-size: 13px; color: #333; }
+        .timeline-item { position: relative; padding-left: 30px; padding-bottom: 20px; border-left: 2px solid #e0e0e0; margin-left: 10px; }
+        .timeline-item:last-child { border-left-color: transparent; }
+        .timeline-dot { position: absolute; left: -6px; top: 0; width: 12px; height: 12px; border-radius: 50%; background: #0f5f4e; }
+        .timeline-date { font-size: 11px; color: #666; margin-bottom: 5px; }
+        .timeline-content { font-size: 13px; color: #333; line-height: 1.5; }
+    
+        .emissions-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
         }
 
-        th, td {
-            padding: 10px;
-            text-align: left;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        th {
-            background: #f9fafb;
-            font-weight: 600;
-            color: #0f5f4e;
-            font-size: 13px;
-        }
-
-        td {
-            font-size: 13px;
-            color: #333;
-        }
-
-        /* Modal Popup Styles */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0, 0, 0, 0.6);
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        .modal-content {
-            background-color: #f5f7fa;
-            margin: 2% auto;
-            padding: 0;
-            width: 95%;
-            max-width: 1400px;
+        .emissions-summary-card {
+            background: linear-gradient(135deg, #0f5f4e 0%, #17a085 100%);
+            padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
-            animation: slideDown 0.3s;
-            max-height: 90vh;
+            text-align: center;
+            color: white;
+            box-shadow: 0 4px 12px rgba(15, 95, 78, 0.3);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .emissions-summary-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 6px 20px rgba(15, 95, 78, 0.4);
+        }
+
+        .emissions-summary-card.scope2-card {
+            background: linear-gradient(135deg, #17a085 0%, #20c997 100%);
+        }
+
+        .emissions-summary-card.scope3-card {
+            background: linear-gradient(135deg, #20c997 0%, #28a745 100%);
+        }
+
+        .emissions-summary-card.total {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #0a4d3e 0%, #0f5f4e 100%);
+        }
+
+        .emissions-summary-label {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .emissions-summary-value {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+            line-height: 1;
+        }
+
+        .emissions-summary-unit {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .emissions-summary-subtitle {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 8px;
+        }
+
+        .all-suppliers-list {
+            max-height: 400px;
             overflow-y: auto;
         }
 
-        @keyframes slideDown {
-            from {
-                transform: translateY(-50px);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
+        .all-suppliers-list::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .modal-header {
-            background: white;
-            padding: 25px;
-            border-radius: 12px 12px 0 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 2px solid #f0f0f0;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+        .all-suppliers-list::-webkit-scrollbar-track {
+            background: #f0f0f0;
+            border-radius: 4px;
         }
 
-        .modal-title-section h2 {
-            color: #0f5f4e;
-            font-size: 24px;
-            margin: 0 0 5px 0;
+        .all-suppliers-list::-webkit-scrollbar-thumb {
+            background: #0f5f4e;
+            border-radius: 4px;
         }
 
-        .modal-title-section p {
-            color: #666;
-            font-size: 14px;
-            margin: 0;
-        }
-
-        .close-button {
-            background: #dc3545;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-
-        .close-button:hover {
-            background: #c82333;
-        }
-
-        .modal-body {
-            padding: 20px;
-        }
-
-        .regions-grid {
+        .supplier-emissions-row {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-
-        .region-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        .region-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .region-title {
-            font-size: 18px;
-            color: #0f5f4e;
-            font-weight: 600;
-        }
-
-        .region-icon {
-            font-size: 16px;
-            font-weight: 700;
-            color: #0f5f4e;
-        }
-
-        .region-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-
-        .stat-box {
+            grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr;
+            gap: 10px;
+            padding: 12px;
             background: #f9fafb;
-            padding: 10px;
             border-radius: 8px;
-            text-align: center;
+            margin-bottom: 8px;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid #0f5f4e;
         }
 
-        .stat-label {
-            font-size: 11px;
-            color: #666;
-            margin-bottom: 5px;
+        .supplier-emissions-row:hover {
+            background: #f0f4f3;
+            transform: translateX(4px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .supplier-emissions-header {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr 1fr 1.5fr;
+            gap: 10px;
+            padding: 12px;
+            background: #0f5f4e;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            font-weight: 600;
+            font-size: 12px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .stat-value {
-            font-size: 16px;
-            font-weight: 700;
-            color: #0f5f4e;
+        .supplier-emissions-header-cell {
+            text-align: right;
         }
 
-        .country-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+        .supplier-emissions-header-cell:first-child {
+            text-align: left;
         }
 
-        .country-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px;
-            background: #f9fafb;
-            border-radius: 8px;
-            border-left: 4px solid #0f5f4e;
-        }
-
-        .country-name {
-            font-weight: 500;
-            color: #333;
-            font-size: 13px;
-        }
-
-        .country-suppliers {
-            font-weight: 600;
-            color: #0f5f4e;
-            font-size: 13px;
-        }
-
-        .risk-badge {
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-size: 10px;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-
-        .risk-low { background: #d4edda; color: #155724; }
-        .risk-medium { background: #fff3cd; color: #856404; }
-        .risk-high { background: #fee; color: #c00; }
-
-        .modal-chart-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
-        }
-
-        .modal-chart-header {
-            font-size: 18px;
-            color: #0f5f4e;
-            font-weight: 600;
-            margin-bottom: 15px;
-            padding-bottom: 12px;
-            border-bottom: 2px solid #f0f0f0;
-        }
-
-        .modal-chart-container {
-            position: relative;
-            height: 300px;
-        }
-
-        .insights-section {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        }
-
-        .insights-header {
-            font-size: 18px;
-            color: #0f5f4e;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-
-        .insight-item {
-            display: flex;
-            gap: 12px;
-            padding: 12px;
-            background: #f9fafb;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            border-left: 4px solid;
-        }
-
-        .insight-icon {
-            font-size: 18px;
-            font-weight: 700;
-            flex-shrink: 0;
-            color: #0f5f4e;
-        }
-
-        .insight-content {
-            flex: 1;
-        }
-
-        .insight-title {
+        .supplier-emissions-name {
             font-weight: 600;
             color: #333;
-            margin-bottom: 5px;
             font-size: 14px;
         }
 
-        .insight-text {
+        .supplier-emissions-value {
+            font-size: 13px;
             color: #666;
-            font-size: 12px;
-            line-height: 1.5;
+            text-align: right;
+        }
+
+        .supplier-emissions-value strong {
+            color: #0f5f4e;
+            font-weight: 600;
         }
     </style>
 </head>
@@ -579,55 +505,91 @@
     <div class="dashboard">
         <div class="header">
             <h1>Supplier Sustainability Dashboard</h1>
-            <p>Comprehensive overview of supplier environmental performance metrics</p>
+            <p>Comprehensive overview of supplier environmental performance metrics - Click any supplier for detailed Scope 1, 2, 3 analysis</p>
         </div>
 
         <div class="widgets-grid">
-            <!-- Widget 1: High-Risk Suppliers -->
+                        <!-- Widget 1: Total Emissions Overview -->
+            <div class="widget">
+                <div class="widget-header">
+                    <div class="widget-title-section">
+                        <h3 class="widget-title">Total Emissions Overview</h3>
+                        <div class="info-icon" data-info="Aggregated Scope 1, 2, 3 emissions across all suppliers. Click any card to drill down into detailed supplier breakdown.">ⓘ</div>
+                    </div>
+                    <div class="widget-icon">Σ</div>
+                </div>
+                <div class="emissions-summary-grid">
+                    <div class="emissions-summary-card" onclick="openEmissionsBreakdown('scope1')">
+                        <div class="emissions-summary-label">Scope 1 Total</div>
+                        <div class="emissions-summary-value" id="totalScope1">-</div>
+                        <div class="emissions-summary-unit">tonnes CO2e</div>
+                        <div class="emissions-summary-subtitle">Direct Emissions</div>
+                    </div>
+                    <div class="emissions-summary-card scope2-card" onclick="openEmissionsBreakdown('scope2')">
+                        <div class="emissions-summary-label">Scope 2 Total</div>
+                        <div class="emissions-summary-value" id="totalScope2">-</div>
+                        <div class="emissions-summary-unit">tonnes CO2e</div>
+                        <div class="emissions-summary-subtitle">Energy Indirect</div>
+                    </div>
+                    <div class="emissions-summary-card scope3-card" onclick="openEmissionsBreakdown('scope3')">
+                        <div class="emissions-summary-label">Scope 3 Total</div>
+                        <div class="emissions-summary-value" id="totalScope3">-</div>
+                        <div class="emissions-summary-unit">tonnes CO2e</div>
+                        <div class="emissions-summary-subtitle">Value Chain</div>
+                    </div>
+                    <div class="emissions-summary-card total" onclick="openEmissionsBreakdown('all')">
+                        <div class="emissions-summary-label">Total Emissions (All Scopes)</div>
+                        <div class="emissions-summary-value" id="totalEmissions">-</div>
+                        <div class="emissions-summary-unit">tonnes CO2e across all suppliers</div>
+                        <div class="emissions-summary-subtitle">Click to view detailed breakdown by supplier</div>
+                    </div>
+                </div>
+                <div class="click-hint">👆 Click any card above to drill down into emissions details</div>
+            </div>
+
+<!-- Widget: High-Risk Suppliers -->
             <div class="widget">
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">High-Risk Suppliers</h3>
-                        <div class="info-icon" data-info="Suppliers flagged for environmental compliance issues, high emissions, or lack of sustainability certifications. Requires immediate attention and remediation plans.">ⓘ</div>
                     </div>
                     <div class="widget-icon">!</div>
                 </div>
                 <div class="supplier-list">
-                    <div class="supplier-item" style="border-left-color: #dc3545;">
+                    <div class="supplier-item" style="border-left-color: #dc3545;" onclick="openSupplierDetail('Atlas Manufacturing')">
                         <div>
                             <div class="supplier-name">Atlas Manufacturing</div>
                             <div style="font-size: 12px; color: #666; margin-top: 4px;">High emissions | No certification</div>
                         </div>
                         <span class="badge badge-high">Critical</span>
                     </div>
-                    <div class="supplier-item" style="border-left-color: #ffc107;">
+                    <div class="supplier-item" style="border-left-color: #ffc107;" onclick="openSupplierDetail('Velocity Logistics')">
                         <div>
                             <div class="supplier-name">Velocity Logistics</div>
                             <div style="font-size: 12px; color: #666; margin-top: 4px;">Compliance issues | Audit pending</div>
                         </div>
                         <span class="badge badge-medium">Review</span>
                     </div>
-                    <div class="supplier-item" style="border-left-color: #fd7e14;">
+                    <div class="supplier-item" style="border-left-color: #fd7e14;" onclick="openSupplierDetail('Phoenix Textiles')">
                         <div>
                             <div class="supplier-name">Phoenix Textiles</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Water usage concerns | Action plan due</div>
+                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Water usage concerns</div>
                         </div>
                         <span class="badge badge-medium">Monitor</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Widget 2: Top Performing Suppliers -->
+            <!-- Widget: Top Performing Suppliers -->
             <div class="widget">
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Top Performing Suppliers</h3>
-                        <div class="info-icon" data-info="Suppliers ranked by overall sustainability score based on carbon emissions, renewable energy usage, waste management, and certifications. Top performers serve as benchmarks.">ⓘ</div>
                     </div>
                     <div class="widget-icon">★</div>
                 </div>
                 <div class="supplier-list">
-                    <div class="ranking-item">
+                    <div class="ranking-item" onclick="openSupplierDetail('GreenTech Solutions')">
                         <div class="rank-number">1</div>
                         <div class="rank-details">
                             <div class="rank-name">GreenTech Solutions</div>
@@ -635,7 +597,7 @@
                         </div>
                         <span class="trend-icon trend-down">↓</span>
                     </div>
-                    <div class="ranking-item">
+                    <div class="ranking-item" onclick="openSupplierDetail('Sustainable Resources Co')">
                         <div class="rank-number">2</div>
                         <div class="rank-details">
                             <div class="rank-name">Sustainable Resources Co</div>
@@ -643,7 +605,7 @@
                         </div>
                         <span class="trend-icon trend-up">↑</span>
                     </div>
-                    <div class="ranking-item">
+                    <div class="ranking-item" onclick="openSupplierDetail('EcoMaterials Global')">
                         <div class="rank-number">3</div>
                         <div class="rank-details">
                             <div class="rank-name">EcoMaterials Global</div>
@@ -654,89 +616,24 @@
                 </div>
             </div>
 
-            <!-- Widget 3: Certification Status -->
+            <!-- Widget: Certification Status -->
             <div class="widget">
                 <div class="widget-header">
                     <div class="widget-title-section">
-                        <h3 class="widget-title">Certification Status Distribution</h3>
-                        <div class="info-icon" data-info="Breakdown of environmental certifications across supplier base. Shows proportion with ISO 14001, Carbon Neutral status, no certification, or in-progress certification efforts.">ⓘ</div>
+                        <h3 class="widget-title">Certification Status</h3>
                     </div>
                     <div class="widget-icon">C</div>
                 </div>
                 <div class="chart-container">
-                    <canvas id="certificationChart"></canvas>
+                    <canvas id="certChart"></canvas>
                 </div>
             </div>
 
-            <!-- Widget 4: Geographic Distribution (INTERACTIVE) -->
-            <div class="widget">
-                <div class="widget-header">
-                    <div class="widget-title-section">
-                        <h3 class="widget-title">Geographic Distribution</h3>
-                        <div class="info-icon" data-info="Number of suppliers by region. Click on the chart to view detailed regional breakdown including country-level data and regional risk profiles.">ⓘ</div>
-                    </div>
-                    <div class="widget-icon">G</div>
-                </div>
-                <div class="chart-container chart-clickable" id="geoChartContainer">
-                    <canvas id="geoChart"></canvas>
-                </div>
-                <div class="click-hint">Click chart to view detailed popup</div>
-            </div>
-
-            <!-- Widget 5: Renewable Energy Usage -->
-            <div class="widget">
-                <div class="widget-header">
-                    <div class="widget-title-section">
-                        <h3 class="widget-title">Renewable Energy Adoption</h3>
-                        <div class="info-icon" data-info="Percentage of operations powered by renewable energy sources for top 5 suppliers. Measures progress toward clean energy transition and carbon reduction goals.">ⓘ</div>
-                    </div>
-                    <div class="widget-icon">E</div>
-                </div>
-                <div class="chart-container">
-                    <canvas id="renewableChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Widget 6: Carbon Footprint Trends -->
-            <div class="widget">
-                <div class="widget-header">
-                    <div class="widget-title-section">
-                        <h3 class="widget-title">Carbon Footprint Trend Analysis</h3>
-                        <div class="info-icon" data-info="Monthly carbon emissions trends showing increase, decrease, or stability. Red arrows indicate emissions growth requiring intervention; green arrows show successful reduction efforts.">ⓘ</div>
-                    </div>
-                    <div class="widget-icon">T</div>
-                </div>
-                <div class="supplier-list">
-                    <div class="supplier-item" style="border-left-color: #dc3545;">
-                        <div>
-                            <div class="supplier-name">Nexus Freight Group</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">+12% vs last quarter</div>
-                        </div>
-                        <span class="trend-icon trend-up">↑</span>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #28a745;">
-                        <div>
-                            <div class="supplier-name">GreenTech Solutions</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">-8% vs last quarter</div>
-                        </div>
-                        <span class="trend-icon trend-down">↓</span>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #ffc107;">
-                        <div>
-                            <div class="supplier-name">Global Trade Alliance</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">±1% vs last quarter</div>
-                        </div>
-                        <span class="trend-icon trend-stable">→</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Widget 7: Key Metrics -->
+            <!-- Widget: Key Metrics -->
             <div class="widget">
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Key Performance Indicators</h3>
-                        <div class="info-icon" data-info="Core sustainability metrics aggregated across supplier network: total suppliers tracked, average sustainability score, certified suppliers percentage, and improvement rate year-over-year.">ⓘ</div>
                     </div>
                     <div class="widget-icon">M</div>
                 </div>
@@ -746,11 +643,11 @@
                         <div class="metric-value">30</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-label">Avg. Sustainability Score</div>
+                        <div class="metric-label">Avg. Score</div>
                         <div class="metric-value">76/100</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-label">Certified Suppliers</div>
+                        <div class="metric-label">Certified</div>
                         <div class="metric-value">60%</div>
                     </div>
                     <div class="metric-card">
@@ -760,661 +657,504 @@
                 </div>
             </div>
 
-            <!-- Widget 8: Compliance & Audit Status -->
+            <!-- Widget: Carbon Footprint Trends -->
             <div class="widget">
                 <div class="widget-header">
                     <div class="widget-title-section">
-                        <h3 class="widget-title">Compliance & Audit Status</h3>
-                        <div class="info-icon" data-info="Current audit status for key suppliers showing last audit date, next scheduled audit, and compliance status. Action Required indicates failed audits or overdue corrective actions.">ⓘ</div>
+                        <h3 class="widget-title">Carbon Footprint Trends</h3>
                     </div>
-                    <div class="widget-icon">A</div>
+                    <div class="widget-icon">T</div>
                 </div>
                 <div class="supplier-list">
-                    <div class="supplier-item" style="border-left-color: #28a745;">
-                        <div>
-                            <div class="supplier-name">GreenTech Solutions</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Last audit: Oct 15, 2025 | Next: Jan 15, 2026</div>
-                        </div>
-                        <span class="badge badge-certified">Compliant</span>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #ffc107;">
-                        <div>
-                            <div class="supplier-name">EcoMaterials Global</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Last audit: Sep 28, 2025 | Next: Dec 28, 2025</div>
-                        </div>
-                        <span class="badge badge-medium">Action Required</span>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #28a745;">
-                        <div>
-                            <div class="supplier-name">Sustainable Resources Co</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Last audit: Oct 5, 2025 | Next: Jan 5, 2026</div>
-                        </div>
-                        <span class="badge badge-certified">Passed</span>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #17a2b8;">
+                    <div class="supplier-item" style="border-left-color: #dc3545;" onclick="openSupplierDetail('Nexus Freight Group')">
                         <div>
                             <div class="supplier-name">Nexus Freight Group</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Last audit: Aug 20, 2025 | Next: Nov 20, 2025</div>
+                            <div style="font-size: 12px; color: #666; margin-top: 4px;">+12% vs last quarter</div>
                         </div>
-                        <span class="badge badge-medium">Scheduled</span>
+                        <span class="trend-icon trend-up">↑</span>
+                    </div>
+                    <div class="supplier-item" style="border-left-color: #28a745;" onclick="openSupplierDetail('GreenTech Solutions')">
+                        <div>
+                            <div class="supplier-name">GreenTech Solutions</div>
+                            <div style="font-size: 12px; color: #666; margin-top: 4px;">-8% vs last quarter</div>
+                        </div>
+                        <span class="trend-icon trend-down">↓</span>
+                    </div>
+                    <div class="supplier-item" style="border-left-color: #ffc107;" onclick="openSupplierDetail('Global Trade Alliance')">
+                        <div>
+                            <div class="supplier-name">Global Trade Alliance</div>
+                            <div style="font-size: 12px; color: #666; margin-top: 4px;">±1% vs last quarter</div>
+                        </div>
+                        <span class="trend-icon trend-stable">→</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Widget 9: Cost vs Emissions Analysis -->
+            <!-- Widget: Renewable Energy -->
             <div class="widget">
                 <div class="widget-header">
                     <div class="widget-title-section">
-                        <h3 class="widget-title">Cost vs Emissions Efficiency</h3>
-                        <div class="info-icon" data-info="Scatter plot showing relationship between annual supplier costs and carbon emissions. Identifies suppliers with optimal cost-efficiency and those requiring emission reduction investments.">ⓘ</div>
+                        <h3 class="widget-title">Renewable Energy Adoption</h3>
                     </div>
-                    <div class="widget-icon">$</div>
+                    <div class="widget-icon">E</div>
                 </div>
                 <div class="chart-container">
-                    <canvas id="costEmissionsChart"></canvas>
-                </div>
-            </div>
-
-            <!-- Widget 10: Supplier Reduction Targets -->
-            <div class="widget">
-                <div class="widget-header">
-                    <div class="widget-title-section">
-                        <h3 class="widget-title">Supplier Reduction Targets (2025)</h3>
-                        <div class="info-icon" data-info="Progress toward 2025 emission reduction targets for each supplier. Progress bars show percentage of target achieved. Green indicates on-track, yellow at-risk, red behind schedule.">ⓘ</div>
-                    </div>
-                    <div class="widget-icon">R</div>
-                </div>
-                <div class="supplier-list">
-                    <div class="supplier-item" style="border-left-color: #28a745;">
-                        <div style="flex: 1;">
-                            <div class="supplier-name">GreenTech Solutions</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Target: -25% | Progress: 18%</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 72%; background: #28a745;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #ffc107;">
-                        <div style="flex: 1;">
-                            <div class="supplier-name">EcoMaterials Global</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Target: -20% | Progress: 8%</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 40%; background: #ffc107;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #17a085;">
-                        <div style="flex: 1;">
-                            <div class="supplier-name">Sustainable Resources Co</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Target: -30% | Progress: 22%</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 73%; background: #17a085;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #dc3545;">
-                        <div style="flex: 1;">
-                            <div class="supplier-name">Nexus Freight Group</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Target: -15% | Progress: 4%</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 27%; background: #dc3545;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="supplier-item" style="border-left-color: #20c997;">
-                        <div style="flex: 1;">
-                            <div class="supplier-name">Global Trade Alliance</div>
-                            <div style="font-size: 12px; color: #666; margin-top: 4px;">Target: -18% | Progress: 11%</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: 61%; background: #20c997;"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <canvas id="renewableChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Modal Popup for Regional Breakdown -->
-    <div id="regionalModal" class="modal">
+    <!-- Supplier Detail Modal -->
+    <div id="supplierModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <div class="modal-title-section">
-                    <h2>Regional Supplier Breakdown</h2>
-                    <p>Detailed analysis of supplier distribution and performance by region</p>
+                    <h2 id="modalTitle">Supplier Details</h2>
+                    <p id="modalSubtitle">Comprehensive emissions analysis</p>
                 </div>
                 <button class="close-button" onclick="closeModal()">Close</button>
             </div>
-            <div class="modal-body">
-                <!-- Regional Cards -->
-                <div class="regions-grid">
-                    <!-- Asia -->
-                    <div class="region-card">
-                        <div class="region-header">
-                            <h3 class="region-title">Asia</h3>
-                            <div class="region-icon">AS</div>
-                        </div>
-                        <div class="region-stats">
-                            <div class="stat-box">
-                                <div class="stat-label">Suppliers</div>
-                                <div class="stat-value">12</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Avg Score</div>
-                                <div class="stat-value">72/100</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Certified</div>
-                                <div class="stat-value">58%</div>
-                            </div>
-                        </div>
-                        <div class="country-list">
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">China</span>
-                                    <span class="risk-badge risk-medium">Medium Risk</span>
-                                </div>
-                                <span class="country-suppliers">5 suppliers</span>
-                            </div>
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">India</span>
-                                    <span class="risk-badge risk-medium">Medium Risk</span>
-                                </div>
-                                <span class="country-suppliers">3 suppliers</span>
-                            </div>
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">Vietnam</span>
-                                    <span class="risk-badge risk-low">Low Risk</span>
-                                </div>
-                                <span class="country-suppliers">2 suppliers</span>
-                            </div>
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">Japan</span>
-                                    <span class="risk-badge risk-low">Low Risk</span>
-                                </div>
-                                <span class="country-suppliers">2 suppliers</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Europe -->
-                    <div class="region-card">
-                        <div class="region-header">
-                            <h3 class="region-title">Europe</h3>
-                            <div class="region-icon">EU</div>
-                        </div>
-                        <div class="region-stats">
-                            <div class="stat-box">
-                                <div class="stat-label">Suppliers</div>
-                                <div class="stat-value">8</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Avg Score</div>
-                                <div class="stat-value">84/100</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Certified</div>
-                                <div class="stat-value">88%</div>
-                            </div>
-                        </div>
-                        <div class="country-list">
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">Germany</span>
-                                    <span class="risk-badge risk-low">Low Risk</span>
-                                </div>
-                                <span class="country-suppliers">3 suppliers</span>
-                            </div>
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">Netherlands</span>
-                                    <span class="risk-badge risk-low">Low Risk</span>
-                                </div>
-                                <span class="country-suppliers">2 suppliers</span>
-                            </div>
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">Sweden</span>
-                                    <span class="risk-badge risk-low">Low Risk</span>
-                                </div>
-                                <span class="country-suppliers">2 suppliers</span>
-                            </div>
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">France</span>
-                                    <span class="risk-badge risk-low">Low Risk</span>
-                                </div>
-                                <span class="country-suppliers">1 supplier</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- North America -->
-                    <div class="region-card">
-                        <div class="region-header">
-                            <h3 class="region-title">North America</h3>
-                            <div class="region-icon">NA</div>
-                        </div>
-                        <div class="region-stats">
-                            <div class="stat-box">
-                                <div class="stat-label">Suppliers</div>
-                                <div class="stat-value">6</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Avg Score</div>
-                                <div class="stat-value">78/100</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Certified</div>
-                                <div class="stat-value">67%</div>
-                            </div>
-                        </div>
-                        <div class="country-list">
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">United States</span>
-                                    <span class="risk-badge risk-low">Low Risk</span>
-                                </div>
-                                <span class="country-suppliers">4 suppliers</span>
-                            </div>
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">Canada</span>
-                                    <span class="risk-badge risk-low">Low Risk</span>
-                                </div>
-                                <span class="country-suppliers">2 suppliers</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- South America -->
-                    <div class="region-card">
-                        <div class="region-header">
-                            <h3 class="region-title">South America</h3>
-                            <div class="region-icon">SA</div>
-                        </div>
-                        <div class="region-stats">
-                            <div class="stat-box">
-                                <div class="stat-label">Suppliers</div>
-                                <div class="stat-value">3</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Avg Score</div>
-                                <div class="stat-value">65/100</div>
-                            </div>
-                            <div class="stat-box">
-                                <div class="stat-label">Certified</div>
-                                <div class="stat-value">33%</div>
-                            </div>
-                        </div>
-                        <div class="country-list">
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">Brazil</span>
-                                    <span class="risk-badge risk-medium">Medium Risk</span>
-                                </div>
-                                <span class="country-suppliers">2 suppliers</span>
-                            </div>
-                            <div class="country-item">
-                                <div>
-                                    <span class="country-name">Argentina</span>
-                                    <span class="risk-badge risk-high">High Risk</span>
-                                </div>
-                                <span class="country-suppliers">1 supplier</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Comparative Charts -->
-                <div class="modal-chart-section">
-                    <h3 class="modal-chart-header">Regional Sustainability Score Comparison</h3>
-                    <div class="modal-chart-container">
-                        <canvas id="regionalScoreChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="modal-chart-section">
-                    <h3 class="modal-chart-header">Regional Emissions Profile</h3>
-                    <div class="modal-chart-container">
-                        <canvas id="regionalEmissionsChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Key Insights -->
-                <div class="insights-section">
-                    <h3 class="insights-header">Key Regional Insights</h3>
-                    
-                    <div class="insight-item" style="border-left-color: #28a745;">
-                        <div class="insight-icon">+</div>
-                        <div class="insight-content">
-                            <div class="insight-title">Europe Leading in Sustainability</div>
-                            <div class="insight-text">European suppliers maintain the highest average sustainability score (84/100) with 88% certification rate. Strong regulatory framework drives compliance and innovation.</div>
-                        </div>
-                    </div>
-
-                    <div class="insight-item" style="border-left-color: #ffc107;">
-                        <div class="insight-icon">i</div>
-                        <div class="insight-content">
-                            <div class="insight-title">Asia Requires Additional Support</div>
-                            <div class="insight-text">While Asia hosts the largest supplier base (12 suppliers), average scores remain moderate (72/100). Targeted capacity building programs recommended for China and India suppliers.</div>
-                        </div>
-                    </div>
-
-                    <div class="insight-item" style="border-left-color: #17a085;">
-                        <div class="insight-icon">↑</div>
-                        <div class="insight-content">
-                            <div class="insight-title">North America Shows Steady Progress</div>
-                            <div class="insight-text">North American suppliers demonstrate consistent improvement with 67% certification rate. Focus on renewable energy adoption driving emissions reductions.</div>
-                        </div>
-                    </div>
-
-                    <div class="insight-item" style="border-left-color: #dc3545;">
-                        <div class="insight-icon">→</div>
-                        <div class="insight-content">
-                            <div class="insight-title">South America Needs Immediate Attention</div>
-                            <div class="insight-text">Lowest regional performance (65/100 average) with only 33% certified. Argentina supplier flagged as high-risk. Audit and remediation plan required within 60 days.</div>
-                        </div>
-                    </div>
-
-                    <div class="insight-item" style="border-left-color: #0f5f4e;">
-                        <div class="insight-icon">○</div>
-                        <div class="insight-content">
-                            <div class="insight-title">Geographic Diversification Opportunity</div>
-                            <div class="insight-text">Only 1 supplier in Africa presents supply chain risk. Consider strategic partnerships in Kenya, South Africa, or Morocco to improve regional balance and resilience.</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <div class="modal-body" id="modalBody"></div>
         </div>
     </div>
 
     <script>
-        // Chart 1: Certification Status
-        const certCtx = document.getElementById('certificationChart').getContext('2d');
-        new Chart(certCtx, {
+        const suppliersData = {
+            'GreenTech Solutions': { score: 94, status: 'good', location: 'Germany', region: 'Europe', certification: 'ISO 14001, Carbon Neutral', renewableEnergy: 85, totalEmissions: 2450, scope1: 680, scope2: 420, scope3: 1350, scope1Sources: [{name:'Direct fuel',value:420},{name:'Vehicles',value:180},{name:'Process',value:80}], scope2Sources: [{name:'Electricity',value:280},{name:'Heating',value:90},{name:'Cooling',value:50}], scope3Sources: [{name:'Transport',value:520},{name:'Travel',value:180},{name:'Commuting',value:220},{name:'Goods',value:280},{name:'Waste',value:150}], reductionTarget: 25, reductionProgress: 18, trend: 'down', trendValue: '-8%' },
+            'Sustainable Resources Co': { score: 88, status: 'good', location: 'United States', region: 'North America', certification: 'ISO 14001', renewableEnergy: 72, totalEmissions: 3150, scope1: 890, scope2: 620, scope3: 1640, scope1Sources: [{name:'Direct fuel',value:520},{name:'Vehicles',value:280},{name:'Process',value:90}], scope2Sources: [{name:'Electricity',value:420},{name:'Heating',value:150},{name:'Cooling',value:50}], scope3Sources: [{name:'Transport',value:680},{name:'Travel',value:220},{name:'Commuting',value:280},{name:'Goods',value:320},{name:'Waste',value:140}], reductionTarget: 30, reductionProgress: 22, trend: 'up', trendValue: '+3%' },
+            'EcoMaterials Global': { score: 82, status: 'good', location: 'Netherlands', region: 'Europe', certification: 'ISO 14001', renewableEnergy: 45, totalEmissions: 4280, scope1: 1150, scope2: 980, scope3: 2150, scope1Sources: [{name:'Direct fuel',value:720},{name:'Vehicles',value:320},{name:'Process',value:110}], scope2Sources: [{name:'Electricity',value:680},{name:'Heating',value:220},{name:'Cooling',value:80}], scope3Sources: [{name:'Transport',value:820},{name:'Travel',value:280},{name:'Commuting',value:350},{name:'Goods',value:480},{name:'Waste',value:220}], reductionTarget: 20, reductionProgress: 8, trend: 'stable', trendValue: '±1%' },
+            'Nexus Freight Group': { score: 68, status: 'warning', location: 'China', region: 'Asia', certification: 'In Progress', renewableEnergy: 58, totalEmissions: 7850, scope1: 2280, scope2: 1620, scope3: 3950, scope1Sources: [{name:'Direct fuel',value:1420},{name:'Vehicles',value:680},{name:'Process',value:180}], scope2Sources: [{name:'Electricity',value:1180},{name:'Heating',value:320},{name:'Cooling',value:120}], scope3Sources: [{name:'Transport',value:1680},{name:'Travel',value:480},{name:'Commuting',value:520},{name:'Goods',value:820},{name:'Waste',value:450}], reductionTarget: 15, reductionProgress: 4, trend: 'up', trendValue: '+12%' },
+            'Global Trade Alliance': { score: 74, status: 'good', location: 'Canada', region: 'North America', certification: 'ISO 14001', renewableEnergy: 38, totalEmissions: 5420, scope1: 1580, scope2: 1120, scope3: 2720, scope1Sources: [{name:'Direct fuel',value:980},{name:'Vehicles',value:480},{name:'Process',value:120}], scope2Sources: [{name:'Electricity',value:780},{name:'Heating',value:260},{name:'Cooling',value:80}], scope3Sources: [{name:'Transport',value:1120},{name:'Travel',value:380},{name:'Commuting',value:420},{name:'Goods',value:580},{name:'Waste',value:220}], reductionTarget: 18, reductionProgress: 11, trend: 'stable', trendValue: '±1%' },
+            'Atlas Manufacturing': { score: 48, status: 'critical', location: 'India', region: 'Asia', certification: 'None', renewableEnergy: 12, totalEmissions: 12800, scope1: 4280, scope2: 3520, scope3: 5000, scope1Sources: [{name:'Direct fuel',value:2680},{name:'Vehicles',value:1180},{name:'Process',value:420}], scope2Sources: [{name:'Electricity',value:2580},{name:'Heating',value:680},{name:'Cooling',value:260}], scope3Sources: [{name:'Transport',value:2180},{name:'Travel',value:580},{name:'Commuting',value:720},{name:'Goods',value:1080},{name:'Waste',value:440}], reductionTarget: 30, reductionProgress: 2, trend: 'up', trendValue: '+18%' },
+            'Velocity Logistics': { score: 56, status: 'warning', location: 'Brazil', region: 'South America', certification: 'In Progress', renewableEnergy: 28, totalEmissions: 9680, scope1: 3180, scope2: 2420, scope3: 4080, scope1Sources: [{name:'Direct fuel',value:2020},{name:'Vehicles',value:980},{name:'Process',value:180}], scope2Sources: [{name:'Electricity',value:1720},{name:'Heating',value:520},{name:'Cooling',value:180}], scope3Sources: [{name:'Transport',value:1820},{name:'Travel',value:520},{name:'Commuting',value:680},{name:'Goods',value:780},{name:'Waste',value:280}], reductionTarget: 22, reductionProgress: 6, trend: 'up', trendValue: '+9%' },
+            'Phoenix Textiles': { score: 62, status: 'warning', location: 'Vietnam', region: 'Asia', certification: 'ISO 14001', renewableEnergy: 34, totalEmissions: 6850, scope1: 1980, scope2: 1680, scope3: 3190, scope1Sources: [{name:'Direct fuel',value:1180},{name:'Vehicles',value:620},{name:'Process',value:180}], scope2Sources: [{name:'Electricity',value:1180},{name:'Heating',value:380},{name:'Cooling',value:120}], scope3Sources: [{name:'Transport',value:1380},{name:'Travel',value:420},{name:'Commuting',value:520},{name:'Goods',value:680},{name:'Waste',value:190}], reductionTarget: 25, reductionProgress: 10, trend: 'stable', trendValue: '±2%' }
+        };
+
+        new Chart(document.getElementById('certChart').getContext('2d'), {
             type: 'doughnut',
-            data: {
-                labels: ['ISO 14001 Certified', 'Carbon Neutral', 'No Certification', 'In Progress'],
-                datasets: [{
-                    data: [12, 6, 8, 4],
-                    backgroundColor: ['#0f5f4e', '#17a085', '#e0e0e0', '#ffc107'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { padding: 10, font: { size: 11 } }
-                    }
-                }
-            }
+            data: { labels: ['ISO 14001', 'Carbon Neutral', 'None', 'In Progress'], datasets: [{ data: [12,6,8,4], backgroundColor: ['#0f5f4e','#17a085','#e0e0e0','#ffc107'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: {padding:10,font:{size:11}} } } }
         });
 
-        // Chart 2: Geographic Distribution (INTERACTIVE)
-        const geoCtx = document.getElementById('geoChart').getContext('2d');
-        new Chart(geoCtx, {
+        new Chart(document.getElementById('renewableChart').getContext('2d'), {
             type: 'bar',
-            data: {
-                labels: ['Asia', 'Europe', 'North America', 'South America', 'Africa'],
-                datasets: [{
-                    label: 'Number of Suppliers',
-                    data: [12, 8, 6, 3, 1],
-                    backgroundColor: '#0f5f4e',
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { font: { size: 11 } }
-                    },
-                    x: {
-                        ticks: { font: { size: 11 } }
-                    }
-                }
-            }
+            data: { labels: ['GreenTech','Sustainable Res','Nexus','EcoMaterials','Global'], datasets: [{ label:'Renewable %', data:[85,72,58,45,38], backgroundColor:['#0f5f4e','#17a085','#20c997','#ffc107','#fd7e14'], borderRadius:6 }] },
+            options: { indexAxis:'y', responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}}, scales:{x:{beginAtZero:true,max:100,ticks:{font:{size:11}}},y:{ticks:{font:{size:11}}}} }
         });
 
-        // Modal Functions
-        function openModal() {
-            document.getElementById('regionalModal').style.display = 'block';
-            document.body.style.overflow = 'hidden';
+        let scopeChart, trendChart;
+        
+        function openSupplierDetail(name) {
+            const s = suppliersData[name];
+            if (!s) return;
             
-            // Initialize modal charts after modal is visible
-            setTimeout(initializeModalCharts, 100);
+            document.getElementById('modalTitle').textContent = name;
+            document.getElementById('modalSubtitle').textContent = `${s.location}, ${s.region} • Score: ${s.score}/100`;
+            
+            const statusText = s.status==='good'?'Performing Well':s.status==='warning'?'Needs Attention':'Critical Risk';
+            
+            document.getElementById('modalBody').innerHTML = `
+                <div class="supplier-detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-card-header"><div class="detail-icon">O</div>Overview</div>
+                        <div class="detail-row"><span class="detail-label">Score</span><span class="detail-value">${s.score}/100</span></div>
+                        <div class="detail-row"><span class="detail-label">Status</span><span class="status-indicator ${s.status}"><span class="status-dot"></span>${statusText}</span></div>
+                        <div class="detail-row"><span class="detail-label">Region</span><span class="detail-value">${s.region}</span></div>
+                        <div class="detail-row"><span class="detail-label">Certification</span><span class="detail-value">${s.certification}</span></div>
+                        <div class="detail-row"><span class="detail-label">Renewable Energy</span><span class="detail-value">${s.renewableEnergy}%</span></div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-card-header"><div class="detail-icon">T</div>Targets</div>
+                        <div class="detail-row"><span class="detail-label">Emissions Trend</span><span class="detail-value"><span class="trend-icon trend-${s.trend}">${s.trend==='up'?'↑':s.trend==='down'?'↓':'→'}</span> ${s.trendValue}</span></div>
+                        <div class="detail-row"><span class="detail-label">Reduction Target</span><span class="detail-value">-${s.reductionTarget}%</span></div>
+                        <div class="detail-row"><span class="detail-label">Progress</span><span class="detail-value">${s.reductionProgress}%</span></div>
+                        <div style="margin-top:10px"><div class="progress-bar"><div class="progress-fill" style="width:${(s.reductionProgress/s.reductionTarget)*100}%;background:${s.status==='critical'?'#dc3545':s.status==='warning'?'#ffc107':'#28a745'}"></div></div></div>
+                    </div>
+                </div>
+                <div class="detail-card">
+                    <div class="detail-card-header"><div class="detail-icon">E</div>Emissions Summary</div>
+                    <div class="scope-emissions-grid">
+                        <div class="scope-card"><div class="scope-card-label">SCOPE 1</div><div class="scope-card-value">${s.scope1.toLocaleString()}</div><div class="scope-card-unit">t CO2e | ${((s.scope1/s.totalEmissions)*100).toFixed(1)}%</div></div>
+                        <div class="scope-card" style="background:linear-gradient(135deg,#17a085 0%,#20c997 100%)"><div class="scope-card-label">SCOPE 2</div><div class="scope-card-value">${s.scope2.toLocaleString()}</div><div class="scope-card-unit">t CO2e | ${((s.scope2/s.totalEmissions)*100).toFixed(1)}%</div></div>
+                        <div class="scope-card" style="background:linear-gradient(135deg,#20c997 0%,#28a745 100%)"><div class="scope-card-label">SCOPE 3</div><div class="scope-card-value">${s.scope3.toLocaleString()}</div><div class="scope-card-unit">t CO2e | ${((s.scope3/s.totalEmissions)*100).toFixed(1)}%</div></div>
+                    </div>
+                    <div style="margin-top:20px;padding:15px;background:#f9fafb;border-radius:8px;text-align:center">
+                        <div style="font-size:13px;color:#666;margin-bottom:5px">TOTAL EMISSIONS</div>
+                        <div style="font-size:32px;font-weight:700;color:#0f5f4e">${s.totalEmissions.toLocaleString()}</div>
+                        <div style="font-size:12px;color:#666">tonnes CO2e per year</div>
+                    </div>
+                </div>
+                <div class="supplier-detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-card-header"><div class="detail-icon">1</div>Scope 1 Breakdown</div>
+                        <div class="scope-breakdown-list">${s.scope1Sources.map(x=>`<div class="scope-breakdown-item"><span class="scope-breakdown-label">${x.name}</span><span class="scope-breakdown-value">${x.value.toLocaleString()} t</span></div>`).join('')}</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-card-header"><div class="detail-icon">2</div>Scope 2 Breakdown</div>
+                        <div class="scope-breakdown-list">${s.scope2Sources.map(x=>`<div class="scope-breakdown-item"><span class="scope-breakdown-label">${x.name}</span><span class="scope-breakdown-value">${x.value.toLocaleString()} t</span></div>`).join('')}</div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-card-header"><div class="detail-icon">3</div>Scope 3 Breakdown</div>
+                        <div class="scope-breakdown-list">${s.scope3Sources.map(x=>`<div class="scope-breakdown-item"><span class="scope-breakdown-label">${x.name}</span><span class="scope-breakdown-value">${x.value.toLocaleString()} t</span></div>`).join('')}</div>
+                    </div>
+                </div>
+                <div class="supplier-detail-grid">
+                    <div class="detail-card">
+                        <div class="detail-card-header"><div class="detail-icon">📊</div>Emissions Distribution</div>
+                        <div class="supplier-detail-chart"><canvas id="scopeChart"></canvas></div>
+                    </div>
+                    <div class="detail-card">
+                        <div class="detail-card-header"><div class="detail-icon">📈</div>12-Month Trend</div>
+                        <div class="supplier-detail-chart"><canvas id="trendChart"></canvas></div>
+                    </div>
+                </div>
+            `;
+            
+            setTimeout(()=>{
+                if(scopeChart) scopeChart.destroy();
+                scopeChart = new Chart(document.getElementById('scopeChart').getContext('2d'), {
+                    type:'doughnut',
+                    data:{ labels:['Scope 1','Scope 2','Scope 3'], datasets:[{ data:[s.scope1,s.scope2,s.scope3], backgroundColor:['#0f5f4e','#17a085','#20c997'], borderWidth:0 }] },
+                    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{position:'bottom',labels:{padding:10,font:{size:11}}}, tooltip:{callbacks:{label:function(c){ const v=c.parsed||0; const t=c.dataset.data.reduce((a,b)=>a+b,0); const p=((v/t)*100).toFixed(1); return `${c.label}: ${v.toLocaleString()} t (${p}%)`; }}} } }
+                });
+                
+                const base = s.totalEmissions;
+                const trend = s.trend==='up'?1.01:s.trend==='down'?0.99:1.0;
+                let monthlyData = [];
+                for(let i=11;i>=0;i--){ const variance=(Math.random()-0.5)*0.04; monthlyData.unshift(Math.round(base*Math.pow(trend,i)*(1+variance))); }
+                
+                if(trendChart) trendChart.destroy();
+                trendChart = new Chart(document.getElementById('trendChart').getContext('2d'), {
+                    type:'line',
+                    data:{ labels:['Dec','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov'], datasets:[{ label:'Monthly Emissions', data:monthlyData, borderColor:s.trend==='up'?'#dc3545':s.trend==='down'?'#28a745':'#ffc107', backgroundColor:s.trend==='up'?'rgba(220,53,69,0.1)':s.trend==='down'?'rgba(40,167,69,0.1)':'rgba(255,193,7,0.1)', borderWidth:2, tension:0.4, fill:true, pointRadius:3 }] },
+                    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>c.parsed.y.toLocaleString()+' t CO2e'}} }, scales:{ y:{beginAtZero:false,ticks:{callback:v=>v.toLocaleString(),font:{size:10}}}, x:{ticks:{font:{size:10}}} } }
+                });
+            },100);
+            
+            document.getElementById('supplierModal').style.display='block';
+            document.body.style.overflow='hidden';
         }
-
+        
         function closeModal() {
-            document.getElementById('regionalModal').style.display = 'none';
-            document.body.style.overflow = 'auto';
+            document.getElementById('supplierModal').style.display='none';
+            document.body.style.overflow='auto';
         }
+        
+        window.onclick = e => { if(e.target.classList.contains('modal')) closeModal(); };
+    
 
-        // Close modal when clicking outside of it
-        window.onclick = function(event) {
-            const modal = document.getElementById('regionalModal');
-            if (event.target == modal) {
-                closeModal();
-            }
-        }
+        // Calculate and display total emissions
+        function calculateTotalEmissions() {
+            let totalScope1 = 0;
+            let totalScope2 = 0;
+            let totalScope3 = 0;
 
-        // Add click handler for geographic chart to open modal
-        document.getElementById('geoChartContainer').addEventListener('click', openModal);
-
-        // Initialize modal charts
-        let regionalScoreChartInstance = null;
-        let regionalEmissionsChartInstance = null;
-
-        function initializeModalCharts() {
-            // Regional Score Comparison Chart
-            if (regionalScoreChartInstance) {
-                regionalScoreChartInstance.destroy();
-            }
-            const scoreCtx = document.getElementById('regionalScoreChart').getContext('2d');
-            regionalScoreChartInstance = new Chart(scoreCtx, {
-                type: 'radar',
-                data: {
-                    labels: ['Sustainability Score', 'Certification Rate', 'Renewable Energy', 'Emissions Reduction', 'Audit Compliance', 'Innovation Index'],
-                    datasets: [{
-                        label: 'Europe',
-                        data: [84, 88, 76, 82, 90, 78],
-                        backgroundColor: 'rgba(15, 95, 78, 0.2)',
-                        borderColor: '#0f5f4e',
-                        borderWidth: 2
-                    }, {
-                        label: 'North America',
-                        data: [78, 67, 68, 72, 75, 70],
-                        backgroundColor: 'rgba(23, 160, 133, 0.2)',
-                        borderColor: '#17a085',
-                        borderWidth: 2
-                    }, {
-                        label: 'Asia',
-                        data: [72, 58, 52, 65, 68, 62],
-                        backgroundColor: 'rgba(32, 201, 151, 0.2)',
-                        borderColor: '#20c997',
-                        borderWidth: 2
-                    }, {
-                        label: 'South America',
-                        data: [65, 33, 45, 58, 55, 48],
-                        backgroundColor: 'rgba(255, 193, 7, 0.2)',
-                        borderColor: '#ffc107',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            beginAtZero: true,
-                            max: 100,
-                            ticks: {
-                                stepSize: 20
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                font: { size: 11 }
-                            }
-                        }
-                    }
-                }
+            Object.values(suppliersData).forEach(supplier => {
+                totalScope1 += supplier.scope1;
+                totalScope2 += supplier.scope2;
+                totalScope3 += supplier.scope3;
             });
 
-            // Regional Emissions Chart
-            if (regionalEmissionsChartInstance) {
-                regionalEmissionsChartInstance.destroy();
+            const totalEmissions = totalScope1 + totalScope2 + totalScope3;
+
+            document.getElementById('totalScope1').textContent = totalScope1.toLocaleString();
+            document.getElementById('totalScope2').textContent = totalScope2.toLocaleString();
+            document.getElementById('totalScope3').textContent = totalScope3.toLocaleString();
+            document.getElementById('totalEmissions').textContent = totalEmissions.toLocaleString();
+        }
+
+        window.addEventListener('DOMContentLoaded', calculateTotalEmissions);
+
+        let emissionsComparisonChartInstance = null;
+
+        function openEmissionsBreakdown(scopeType) {
+            const scopeTitles = {
+                'scope1': 'Scope 1 (Direct Emissions)',
+                'scope2': 'Scope 2 (Energy Indirect)',
+                'scope3': 'Scope 3 (Value Chain)',
+                'all': 'All Scopes'
+            };
+
+            document.getElementById('emissionsModalTitle').textContent = 
+                scopeType === 'all' ? 'Total Emissions Breakdown by Supplier' : scopeTitles[scopeType] + ' Breakdown by Supplier';
+            
+            document.getElementById('emissionsModalSubtitle').textContent = 
+                scopeType === 'all' ? 'Complete emissions profile across all suppliers' : 'Detailed ' + scopeTitles[scopeType].toLowerCase() + ' analysis';
+
+            const suppliersList = Object.entries(suppliersData).map(([name, data]) => ({
+                name: name,
+                scope1: data.scope1,
+                scope2: data.scope2,
+                scope3: data.scope3,
+                total: data.totalEmissions,
+                sortValue: scopeType === 'all' ? data.totalEmissions : 
+                          scopeType === 'scope1' ? data.scope1 :
+                          scopeType === 'scope2' ? data.scope2 : data.scope3
+            })).sort((a, b) => b.sortValue - a.sortValue);
+
+            const listHtml = suppliersList.map(supplier => 
+                '<div class="supplier-emissions-row" onclick="openSupplierDetail(\'' + supplier.name + '\')">' +
+                    '<div class="supplier-emissions-name">' + supplier.name + '</div>' +
+                    '<div class="supplier-emissions-value"><strong>' + supplier.scope1.toLocaleString() + '</strong> t</div>' +
+                    '<div class="supplier-emissions-value"><strong>' + supplier.scope2.toLocaleString() + '</strong> t</div>' +
+                    '<div class="supplier-emissions-value"><strong>' + supplier.scope3.toLocaleString() + '</strong> t</div>' +
+                    '<div class="supplier-emissions-value"><strong>' + supplier.total.toLocaleString() + '</strong> t</div>' +
+                '</div>'
+            ).join('');
+
+            document.getElementById('supplierEmissionsList').innerHTML = listHtml;
+
+            if (emissionsComparisonChartInstance) {
+                emissionsComparisonChartInstance.destroy();
             }
-            const emissionsCtx = document.getElementById('regionalEmissionsChart').getContext('2d');
-            regionalEmissionsChartInstance = new Chart(emissionsCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['Asia', 'Europe', 'North America', 'South America', 'Africa'],
-                    datasets: [{
-                        label: 'Total Emissions (t CO2e)',
-                        data: [48500, 22400, 18200, 9800, 1200],
-                        backgroundColor: '#0f5f4e',
-                        borderRadius: 8
-                    }, {
-                        label: 'Emissions per Supplier',
-                        data: [4042, 2800, 3033, 3267, 1200],
-                        backgroundColor: '#17a085',
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                font: { size: 11 }
+
+            const chartCtx = document.getElementById('emissionsComparisonChart').getContext('2d');
+            const supplierNames = suppliersList.map(s => s.name.split(' ')[0]);
+
+            if (scopeType === 'all') {
+                document.getElementById('emissionsChartTitle').textContent = 'Emissions by Supplier (All Scopes)';
+                emissionsComparisonChartInstance = new Chart(chartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: supplierNames,
+                        datasets: [
+                            {
+                                label: 'Scope 1',
+                                data: suppliersList.map(s => s.scope1),
+                                backgroundColor: '#0f5f4e'
+                            },
+                            {
+                                label: 'Scope 2',
+                                data: suppliersList.map(s => s.scope2),
+                                backgroundColor: '#17a085'
+                            },
+                            {
+                                label: 'Scope 3',
+                                data: suppliersList.map(s => s.scope3),
+                                backgroundColor: '#20c997'
                             }
-                        }
+                        ]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value.toLocaleString();
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: { stacked: true, ticks: { font: { size: 10 } } },
+                            y: { 
+                                stacked: true, 
+                                ticks: { 
+                                    callback: function(v) { return v.toLocaleString(); },
+                                    font: { size: 10 }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { 
+                                position: 'bottom',
+                                labels: { padding: 10, font: { size: 11 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' t CO2e';
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
-        }
-
-        // Chart 3: Renewable Energy Usage
-        const renewCtx = document.getElementById('renewableChart').getContext('2d');
-        new Chart(renewCtx, {
-            type: 'bar',
-            data: {
-                labels: ['GreenTech', 'Sustainable Res', 'Nexus Freight', 'EcoMaterials', 'Global Alliance'],
-                datasets: [{
-                    label: 'Renewable Energy %',
-                    data: [85, 72, 58, 45, 38],
-                    backgroundColor: [
-                        '#0f5f4e',
-                        '#17a085',
-                        '#20c997',
-                        '#ffc107',
-                        '#fd7e14'
-                    ],
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        max: 100,
-                        ticks: { font: { size: 11 } }
+                });
+            } else {
+                const scopeData = suppliersList.map(s => 
+                    scopeType === 'scope1' ? s.scope1 :
+                    scopeType === 'scope2' ? s.scope2 : s.scope3
+                );
+                
+                document.getElementById('emissionsChartTitle').textContent = scopeTitles[scopeType] + ' by Supplier';
+                
+                emissionsComparisonChartInstance = new Chart(chartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: supplierNames,
+                        datasets: [{
+                            label: scopeTitles[scopeType],
+                            data: scopeData,
+                            backgroundColor: scopeType === 'scope1' ? '#0f5f4e' : 
+                                           scopeType === 'scope2' ? '#17a085' : '#20c997',
+                            borderRadius: 8
+                        }]
                     },
-                    y: {
-                        ticks: { font: { size: 11 } }
-                    }
-                }
-            }
-        });
-
-        // Chart 4: Cost vs Emissions
-        const costCtx = document.getElementById('costEmissionsChart').getContext('2d');
-        new Chart(costCtx, {
-            type: 'scatter',
-            data: {
-                datasets: [{
-                    label: 'Suppliers',
-                    data: [
-                        {x: 12.8, y: 450},
-                        {x: 8.5, y: 380},
-                        {x: 6.3, y: 320},
-                        {x: 4.1, y: 280},
-                        {x: 2.9, y: 240}
-                    ],
-                    backgroundColor: '#0f5f4e',
-                    pointRadius: 8,
-                    pointHoverRadius: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return 'Emissions: ' + context.parsed.x + ' t | Cost: $' + context.parsed.y + 'k';
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return context.parsed.y.toLocaleString() + ' t CO2e';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { 
+                                beginAtZero: true,
+                                ticks: { 
+                                    callback: function(v) { return v.toLocaleString(); },
+                                    font: { size: 10 }
+                                }
+                            },
+                            x: {
+                                ticks: { font: { size: 10 } }
                             }
                         }
                     }
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Emissions (t CO2e)',
-                            font: { size: 11 }
-                        },
-                        ticks: { font: { size: 10 } }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: 'Annual Cost ($k)',
-                            font: { size: 11 }
-                        },
-                        ticks: { font: { size: 10 } }
-                    }
-                }
+                });
             }
-        });
+
+            const totalEmissions = suppliersList.reduce((sum, s) => sum + s.total, 0);
+            const avgEmissions = Math.round(totalEmissions / suppliersList.length);
+            const highestEmitter = suppliersList[0];
+            const lowestEmitter = suppliersList[suppliersList.length - 1];
+            
+            const scopeInfo = {
+                'scope1': { desc: 'Direct emissions from owned or controlled sources', icon: '🏭', color: '#0f5f4e' },
+                'scope2': { desc: 'Indirect emissions from purchased energy', icon: '⚡', color: '#17a085' },
+                'scope3': { desc: 'All other indirect emissions in the value chain', icon: '🔗', color: '#20c997' },
+                'all': { desc: 'Complete carbon footprint across all emission categories', icon: '🌍', color: '#0f5f4e' }
+            };
+
+            const info = scopeInfo[scopeType];
+            
+            let insightsHtml = '<div class="insight-item" style="border-left-color: ' + info.color + ';">';
+            insightsHtml += '<div class="insight-icon">' + info.icon + '</div>';
+            insightsHtml += '<div class="insight-content">';
+            insightsHtml += '<div class="insight-title">' + scopeTitles[scopeType] + ' Overview</div>';
+            insightsHtml += '<div class="insight-text">' + info.desc + '</div>';
+            insightsHtml += '</div></div>';
+            
+            insightsHtml += '<div class="insight-item" style="border-left-color: #dc3545;">';
+            insightsHtml += '<div class="insight-icon">↑</div>';
+            insightsHtml += '<div class="insight-content">';
+            insightsHtml += '<div class="insight-title">Highest Emitter: ' + highestEmitter.name + '</div>';
+            insightsHtml += '<div class="insight-text">';
+            if (scopeType === 'all') {
+                insightsHtml += 'Total emissions: ' + highestEmitter.total.toLocaleString() + ' t CO2e (' + ((highestEmitter.total/totalEmissions)*100).toFixed(1) + '% of total)';
+            } else {
+                insightsHtml += scopeTitles[scopeType] + ': ' + highestEmitter.sortValue.toLocaleString() + ' t CO2e';
+            }
+            insightsHtml += '</div></div></div>';
+            
+            insightsHtml += '<div class="insight-item" style="border-left-color: #28a745;">';
+            insightsHtml += '<div class="insight-icon">↓</div>';
+            insightsHtml += '<div class="insight-content">';
+            insightsHtml += '<div class="insight-title">Lowest Emitter: ' + lowestEmitter.name + '</div>';
+            insightsHtml += '<div class="insight-text">';
+            if (scopeType === 'all') {
+                insightsHtml += 'Total emissions: ' + lowestEmitter.total.toLocaleString() + ' t CO2e (' + ((lowestEmitter.total/totalEmissions)*100).toFixed(1) + '% of total)';
+            } else {
+                insightsHtml += scopeTitles[scopeType] + ': ' + lowestEmitter.sortValue.toLocaleString() + ' t CO2e';
+            }
+            insightsHtml += '</div></div></div>';
+            
+            insightsHtml += '<div class="insight-item" style="border-left-color: #0f5f4e;">';
+            insightsHtml += '<div class="insight-icon">📊</div>';
+            insightsHtml += '<div class="insight-content">';
+            insightsHtml += '<div class="insight-title">Statistical Summary</div>';
+            insightsHtml += '<div class="insight-text">Average emissions per supplier: ' + avgEmissions.toLocaleString() + ' t CO2e | ';
+            insightsHtml += 'Total suppliers analyzed: ' + suppliersList.length + ' | ';
+            insightsHtml += 'Combined emissions: ' + totalEmissions.toLocaleString() + ' t CO2e</div>';
+            insightsHtml += '</div></div>';
+
+            if (scopeType === 'all') {
+                const scope1Total = suppliersList.reduce((s,x) => s + x.scope1, 0);
+                const scope2Total = suppliersList.reduce((s,x) => s + x.scope2, 0);
+                const scope3Total = suppliersList.reduce((s,x) => s + x.scope3, 0);
+                
+                insightsHtml += '<div class="insight-item" style="border-left-color: #17a085;">';
+                insightsHtml += '<div class="insight-icon">🎯</div>';
+                insightsHtml += '<div class="insight-content">';
+                insightsHtml += '<div class="insight-title">Scope Distribution</div>';
+                insightsHtml += '<div class="insight-text">Scope 1 represents ' + ((scope1Total/totalEmissions)*100).toFixed(1) + '%, ';
+                insightsHtml += 'Scope 2 represents ' + ((scope2Total/totalEmissions)*100).toFixed(1) + '%, ';
+                insightsHtml += 'Scope 3 represents ' + ((scope3Total/totalEmissions)*100).toFixed(1) + '% of total emissions.</div>';
+                insightsHtml += '</div></div>';
+            }
+
+            document.getElementById('emissionsInsights').innerHTML = insightsHtml;
+
+            document.getElementById('emissionsBreakdownModal').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeEmissionsModal() {
+            document.getElementById('emissionsBreakdownModal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        window.onclick = function(event) {
+            const regionalModal = document.getElementById('regionalModal');
+            const supplierModal = document.getElementById('supplierDetailModal');
+            const emissionsModal = document.getElementById('emissionsBreakdownModal');
+            
+            if (event.target == regionalModal) {
+                closeModal('regionalModal');
+            }
+            if (event.target == supplierModal) {
+                closeSupplierModal();
+            }
+            if (event.target == emissionsModal) {
+                closeEmissionsModal();
+            }
+        }
+
     </script>
+
+    <!-- Emissions Breakdown Modal -->
+    <div id="emissionsBreakdownModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title-section">
+                    <h2 id="emissionsModalTitle">Emissions Breakdown by Supplier</h2>
+                    <p id="emissionsModalSubtitle">Detailed emissions data across all suppliers</p>
+                </div>
+                <button class="close-button" onclick="closeEmissionsModal()">Close</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-chart-section">
+                    <h3 class="modal-chart-header" id="emissionsChartTitle">Emissions Comparison</h3>
+                    <div class="modal-chart-container">
+                        <canvas id="emissionsComparisonChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="detail-card">
+                    <div class="detail-card-header">
+                        <div class="detail-icon">📋</div>
+                        <span id="emissionsTableTitle">All Suppliers - Emissions Data</span>
+                    </div>
+                    <div class="supplier-emissions-header">
+                        <div class="supplier-emissions-header-cell">Supplier Name</div>
+                        <div class="supplier-emissions-header-cell">Scope 1</div>
+                        <div class="supplier-emissions-header-cell">Scope 2</div>
+                        <div class="supplier-emissions-header-cell">Scope 3</div>
+                        <div class="supplier-emissions-header-cell">Total</div>
+                    </div>
+                    <div class="all-suppliers-list" id="supplierEmissionsList">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+
+                <div class="insights-section">
+                    <h3 class="insights-header">Emissions Insights</h3>
+                    <div id="emissionsInsights">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
