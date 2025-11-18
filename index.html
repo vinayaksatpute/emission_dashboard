@@ -193,7 +193,7 @@
             insightsHtml += '<div class="insight-icon">' + info.icon + '</div>';
             insightsHtml += '<div class="insight-content">';
             insightsHtml += '<div class="insight-title-with-icon">' + scopeTitles[scopeType] + ' Overview';
-            insightsHtml += '<span class="insight-info-icon" data-tooltip="This section provides an overview of ' + scopeTitles[scopeType].toLowerCase() + ' and explains what types of emissions are included in this category according to GHG Protocol standards.">ⓘ</span>';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Explains what emissions are included in this category per GHG Protocol standards.">ⓘ</span>';
             insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">' + info.desc + '</div>';
             insightsHtml += '</div></div>';
@@ -202,7 +202,7 @@
             insightsHtml += '<div class="insight-icon">↑</div>';
             insightsHtml += '<div class="insight-content">';
             insightsHtml += '<div class="insight-title-with-icon">Highest Emitter: ' + highestEmitter.name;
-            insightsHtml += '<span class="insight-info-icon" data-tooltip="The supplier with the highest emissions in this category. This identifies priority areas for engagement and emission reduction initiatives. Focus improvement efforts here for maximum impact.">ⓘ</span>';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Priority supplier for emission reduction. Focus improvement efforts here for maximum impact.">ⓘ</span>';
             insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">';
             if (scopeType === 'all') {
@@ -216,7 +216,7 @@
             insightsHtml += '<div class="insight-icon">↓</div>';
             insightsHtml += '<div class="insight-content">';
             insightsHtml += '<div class="insight-title-with-icon">Lowest Emitter: ' + lowestEmitter.name;
-            insightsHtml += '<span class="insight-info-icon" data-tooltip="The supplier with the lowest emissions in this category. Use as a benchmark and best practice example. Study their strategies for potential replication across other suppliers.">ⓘ</span>';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Best practice benchmark. Study their strategies for replication across other suppliers.">ⓘ</span>';
             insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">';
             if (scopeType === 'all') {
@@ -230,7 +230,7 @@
             insightsHtml += '<div class="insight-icon">📊</div>';
             insightsHtml += '<div class="insight-content">';
             insightsHtml += '<div class="insight-title-with-icon">Statistical Summary';
-            insightsHtml += '<span class="insight-info-icon" data-tooltip="Key metrics aggregated across all suppliers: average emissions help identify outliers, total suppliers shows data coverage, and combined emissions represents your complete footprint in this category.">ⓘ</span>';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Aggregated metrics: average emissions, supplier count, and total footprint in this category.">ⓘ</span>';
             insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">Average emissions per supplier: ' + avgEmissions.toLocaleString() + ' t CO2e | ';
             insightsHtml += 'Total suppliers analyzed: ' + suppliersList.length + ' | ';
@@ -246,7 +246,7 @@
                 insightsHtml += '<div class="insight-icon">🎯</div>';
                 insightsHtml += '<div class="insight-content">';
                 insightsHtml += '<div class="insight-title-with-icon">Scope Distribution';
-                insightsHtml += '<span class="insight-info-icon" data-tooltip="Shows the percentage breakdown across Scope 1 (direct), Scope 2 (energy), and Scope 3 (value chain) emissions. Use this to prioritize reduction strategies based on where your emissions are concentrated.">ⓘ</span>';
+                insightsHtml += '<span class="insight-info-icon" data-tooltip="Percentage breakdown across all scopes. Use to prioritize reduction strategies.">ⓘ</span>';
                 insightsHtml += '</div>';
                 insightsHtml += '<div class="insight-text">Scope 1 represents ' + ((scope1Total/totalEmissions)*100).toFixed(1) + '%, ';
                 insightsHtml += 'Scope 2 represents ' + ((scope2Total/totalEmissions)*100).toFixed(1) + '%, ';
@@ -725,6 +725,14 @@
             font-weight: 700;
         }
 
+    
+        .widget-subtitle {
+            font-size: 11px;
+            color: #888;
+            margin-top: 4px;
+            line-height: 1.4;
+            font-weight: normal;
+        }
     </style>
 </head>
 <body>
@@ -740,6 +748,7 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Total Emissions Overview</h3>
+                        <div class="widget-subtitle">Aggregated Scope 1, 2, 3 emissions across all suppliers</div>
                         <div class="info-icon" data-info="Aggregated Scope 1, 2, and 3 emissions across all suppliers. Scope 1: Direct emissions from owned sources. Scope 2: Indirect emissions from purchased energy. Scope 3: All other value chain emissions. Click any card to drill down into detailed supplier-level breakdown.">ⓘ</div>
                     </div>
                     <div class="widget-icon">Σ</div>
@@ -778,7 +787,8 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">High-Risk Suppliers</h3>
-                        <div class="info-icon" data-info="Suppliers flagged for critical environmental compliance issues including high emissions levels, missing sustainability certifications, failed audits, or regulatory violations. These require immediate attention, remediation plans, and close monitoring. Priority should be given to developing corrective action plans and setting improvement milestones.">ⓘ</div>
+                        <div class="widget-subtitle">Suppliers requiring immediate attention for compliance issues</div>
+                        <div class="info-icon" data-info="Suppliers with critical compliance issues requiring immediate attention and remediation plans.">ⓘ</div>
                     </div>
                     <div class="widget-icon">!</div>
                 </div>
@@ -812,7 +822,8 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Top Performing Suppliers</h3>
-                        <div class="info-icon" data-info="Suppliers ranked by overall sustainability score (out of 100) based on multiple factors: carbon emissions intensity, renewable energy usage percentage, waste management practices, water efficiency, and environmental certifications held. Top performers serve as benchmarks and best practice examples. Trends show improvement (↑), decline (↓), or stability (→) compared to previous quarter.">ⓘ</div>
+                        <div class="widget-subtitle">Best performers ranked by sustainability score</div>
+                        <div class="info-icon" data-info="Ranked by sustainability score (0-100). Use top performers as benchmarks. Trends show quarterly changes: ↑ improvement, ↓ decline, → stable.">ⓘ</div>
                     </div>
                     <div class="widget-icon">★</div>
                 </div>
@@ -849,7 +860,8 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Certification Status</h3>
-                        <div class="info-icon" data-info="Distribution of environmental certifications across supplier base. ISO 14001 indicates formal environmental management systems. Carbon Neutral shows commitment to net-zero emissions through reduction and offsetting. In Progress indicates active certification efforts. No Certification highlights suppliers needing engagement to begin formal sustainability programs.">ⓘ</div>
+                        <div class="widget-subtitle">Environmental certification distribution across suppliers</div>
+                        <div class="info-icon" data-info="Shows distribution of environmental certifications. Helps identify which suppliers need engagement for formal sustainability programs.">ⓘ</div>
                     </div>
                     <div class="widget-icon">C</div>
                 </div>
@@ -863,7 +875,8 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Key Performance Indicators</h3>
-                        <div class="info-icon" data-info="Core sustainability metrics aggregated across entire supplier network. Total Suppliers tracks coverage of assessment program. Average Sustainability Score (out of 100) shows overall performance. Certified Suppliers percentage indicates formalization of environmental practices. YoY (Year-over-Year) Improvement demonstrates progress trajectory and effectiveness of engagement initiatives.">ⓘ</div>
+                        <div class="widget-subtitle">Core sustainability metrics and year-over-year trends</div>
+                        <div class="info-icon" data-info="Core metrics showing program coverage, average performance, certification rate, and year-over-year improvement trends.">ⓘ</div>
                     </div>
                     <div class="widget-icon">M</div>
                 </div>
@@ -926,7 +939,8 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Renewable Energy Adoption</h3>
-                        <div class="info-icon" data-info="Percentage of operations powered by renewable energy sources (solar, wind, hydro, geothermal) for top suppliers. Shows progress toward clean energy transition and Scope 2 emission reduction. Higher percentages indicate advanced sustainability practices. Targets typically aim for 80-100% renewable energy. This metric directly impacts carbon footprint and demonstrates climate commitment.">ⓘ</div>
+                        <div class="widget-subtitle">Clean energy usage percentage by top suppliers</div>
+                        <div class="info-icon" data-info="Shows renewable energy usage % (solar, wind, hydro). Higher percentages indicate better sustainability performance and lower Scope 2 emissions.">ⓘ</div>
                     </div>
                     <div class="widget-icon">E</div>
                 </div>
@@ -1263,7 +1277,7 @@
             insightsHtml += '<div class="insight-icon">' + info.icon + '</div>';
             insightsHtml += '<div class="insight-content">';
             insightsHtml += '<div class="insight-title-with-icon">' + scopeTitles[scopeType] + ' Overview';
-            insightsHtml += '<span class="insight-info-icon" data-tooltip="This section provides an overview of ' + scopeTitles[scopeType].toLowerCase() + ' and explains what types of emissions are included in this category according to GHG Protocol standards.">ⓘ</span>';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Explains what emissions are included in this category per GHG Protocol standards.">ⓘ</span>';
             insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">' + info.desc + '</div>';
             insightsHtml += '</div></div>';
@@ -1272,7 +1286,7 @@
             insightsHtml += '<div class="insight-icon">↑</div>';
             insightsHtml += '<div class="insight-content">';
             insightsHtml += '<div class="insight-title-with-icon">Highest Emitter: ' + highestEmitter.name;
-            insightsHtml += '<span class="insight-info-icon" data-tooltip="The supplier with the highest emissions in this category. This identifies priority areas for engagement and emission reduction initiatives. Focus improvement efforts here for maximum impact.">ⓘ</span>';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Priority supplier for emission reduction. Focus improvement efforts here for maximum impact.">ⓘ</span>';
             insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">';
             if (scopeType === 'all') {
@@ -1286,7 +1300,7 @@
             insightsHtml += '<div class="insight-icon">↓</div>';
             insightsHtml += '<div class="insight-content">';
             insightsHtml += '<div class="insight-title-with-icon">Lowest Emitter: ' + lowestEmitter.name;
-            insightsHtml += '<span class="insight-info-icon" data-tooltip="The supplier with the lowest emissions in this category. Use as a benchmark and best practice example. Study their strategies for potential replication across other suppliers.">ⓘ</span>';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Best practice benchmark. Study their strategies for replication across other suppliers.">ⓘ</span>';
             insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">';
             if (scopeType === 'all') {
@@ -1300,7 +1314,7 @@
             insightsHtml += '<div class="insight-icon">📊</div>';
             insightsHtml += '<div class="insight-content">';
             insightsHtml += '<div class="insight-title-with-icon">Statistical Summary';
-            insightsHtml += '<span class="insight-info-icon" data-tooltip="Key metrics aggregated across all suppliers: average emissions help identify outliers, total suppliers shows data coverage, and combined emissions represents your complete footprint in this category.">ⓘ</span>';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Aggregated metrics: average emissions, supplier count, and total footprint in this category.">ⓘ</span>';
             insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">Average emissions per supplier: ' + avgEmissions.toLocaleString() + ' t CO2e | ';
             insightsHtml += 'Total suppliers analyzed: ' + suppliersList.length + ' | ';
@@ -1316,7 +1330,7 @@
                 insightsHtml += '<div class="insight-icon">🎯</div>';
                 insightsHtml += '<div class="insight-content">';
                 insightsHtml += '<div class="insight-title-with-icon">Scope Distribution';
-                insightsHtml += '<span class="insight-info-icon" data-tooltip="Shows the percentage breakdown across Scope 1 (direct), Scope 2 (energy), and Scope 3 (value chain) emissions. Use this to prioritize reduction strategies based on where your emissions are concentrated.">ⓘ</span>';
+                insightsHtml += '<span class="insight-info-icon" data-tooltip="Percentage breakdown across all scopes. Use to prioritize reduction strategies.">ⓘ</span>';
                 insightsHtml += '</div>';
                 insightsHtml += '<div class="insight-text">Scope 1 represents ' + ((scope1Total/totalEmissions)*100).toFixed(1) + '%, ';
                 insightsHtml += 'Scope 2 represents ' + ((scope2Total/totalEmissions)*100).toFixed(1) + '%, ';
