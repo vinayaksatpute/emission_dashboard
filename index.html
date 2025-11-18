@@ -192,14 +192,18 @@
             let insightsHtml = '<div class="insight-item" style="border-left-color: ' + info.color + ';">';
             insightsHtml += '<div class="insight-icon">' + info.icon + '</div>';
             insightsHtml += '<div class="insight-content">';
-            insightsHtml += '<div class="insight-title">' + scopeTitles[scopeType] + ' Overview</div>';
+            insightsHtml += '<div class="insight-title-with-icon">' + scopeTitles[scopeType] + ' Overview';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="This section provides an overview of ' + scopeTitles[scopeType].toLowerCase() + ' and explains what types of emissions are included in this category according to GHG Protocol standards.">ⓘ</span>';
+            insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">' + info.desc + '</div>';
             insightsHtml += '</div></div>';
             
             insightsHtml += '<div class="insight-item" style="border-left-color: #dc3545;">';
             insightsHtml += '<div class="insight-icon">↑</div>';
             insightsHtml += '<div class="insight-content">';
-            insightsHtml += '<div class="insight-title">Highest Emitter: ' + highestEmitter.name + '</div>';
+            insightsHtml += '<div class="insight-title-with-icon">Highest Emitter: ' + highestEmitter.name;
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="The supplier with the highest emissions in this category. This identifies priority areas for engagement and emission reduction initiatives. Focus improvement efforts here for maximum impact.">ⓘ</span>';
+            insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">';
             if (scopeType === 'all') {
                 insightsHtml += 'Total emissions: ' + highestEmitter.total.toLocaleString() + ' t CO2e (' + ((highestEmitter.total/totalEmissions)*100).toFixed(1) + '% of total)';
@@ -211,7 +215,9 @@
             insightsHtml += '<div class="insight-item" style="border-left-color: #28a745;">';
             insightsHtml += '<div class="insight-icon">↓</div>';
             insightsHtml += '<div class="insight-content">';
-            insightsHtml += '<div class="insight-title">Lowest Emitter: ' + lowestEmitter.name + '</div>';
+            insightsHtml += '<div class="insight-title-with-icon">Lowest Emitter: ' + lowestEmitter.name;
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="The supplier with the lowest emissions in this category. Use as a benchmark and best practice example. Study their strategies for potential replication across other suppliers.">ⓘ</span>';
+            insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">';
             if (scopeType === 'all') {
                 insightsHtml += 'Total emissions: ' + lowestEmitter.total.toLocaleString() + ' t CO2e (' + ((lowestEmitter.total/totalEmissions)*100).toFixed(1) + '% of total)';
@@ -223,7 +229,9 @@
             insightsHtml += '<div class="insight-item" style="border-left-color: #0f5f4e;">';
             insightsHtml += '<div class="insight-icon">📊</div>';
             insightsHtml += '<div class="insight-content">';
-            insightsHtml += '<div class="insight-title">Statistical Summary</div>';
+            insightsHtml += '<div class="insight-title-with-icon">Statistical Summary';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Key metrics aggregated across all suppliers: average emissions help identify outliers, total suppliers shows data coverage, and combined emissions represents your complete footprint in this category.">ⓘ</span>';
+            insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">Average emissions per supplier: ' + avgEmissions.toLocaleString() + ' t CO2e | ';
             insightsHtml += 'Total suppliers analyzed: ' + suppliersList.length + ' | ';
             insightsHtml += 'Combined emissions: ' + totalEmissions.toLocaleString() + ' t CO2e</div>';
@@ -237,7 +245,9 @@
                 insightsHtml += '<div class="insight-item" style="border-left-color: #17a085;">';
                 insightsHtml += '<div class="insight-icon">🎯</div>';
                 insightsHtml += '<div class="insight-content">';
-                insightsHtml += '<div class="insight-title">Scope Distribution</div>';
+                insightsHtml += '<div class="insight-title-with-icon">Scope Distribution';
+                insightsHtml += '<span class="insight-info-icon" data-tooltip="Shows the percentage breakdown across Scope 1 (direct), Scope 2 (energy), and Scope 3 (value chain) emissions. Use this to prioritize reduction strategies based on where your emissions are concentrated.">ⓘ</span>';
+                insightsHtml += '</div>';
                 insightsHtml += '<div class="insight-text">Scope 1 represents ' + ((scope1Total/totalEmissions)*100).toFixed(1) + '%, ';
                 insightsHtml += 'Scope 2 represents ' + ((scope2Total/totalEmissions)*100).toFixed(1) + '%, ';
                 insightsHtml += 'Scope 3 represents ' + ((scope3Total/totalEmissions)*100).toFixed(1) + '% of total emissions.</div>';
@@ -286,6 +296,38 @@
         .widget-title-section { display: flex; align-items: center; gap: 8px; flex: 1; }
         .widget-title { font-size: 18px; color: #0f5f4e; font-weight: 600; }
         .info-icon { width: 20px; height: 20px; background: #17a085; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: help; position: relative; }
+
+        .info-icon:hover::after {
+            content: attr(data-info);
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: normal;
+            white-space: normal;
+            width: 300px;
+            z-index: 1000;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        .info-icon:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 22px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: #2c3e50;
+            z-index: 1000;
+        }
+
         .widget-icon { width: 32px; height: 32px; background: #0f5f4e; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-size: 16px; font-weight: 700; }
         .supplier-list { display: flex; flex-direction: column; gap: 12px; }
         .supplier-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f9fafb; border-radius: 8px; border-left: 4px solid; cursor: pointer; transition: all 0.2s; }
@@ -499,6 +541,190 @@
             color: #0f5f4e;
             font-weight: 600;
         }
+    
+        .insight-info-icon {
+            width: 18px;
+            height: 18px;
+            background: #17a085;
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            cursor: help;
+            position: relative;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .insight-info-icon:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2c3e50;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: normal;
+            white-space: normal;
+            width: 320px;
+            z-index: 2000;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+            line-height: 1.5;
+            text-align: left;
+        }
+
+        .insight-info-icon:hover::before {
+            content: '';
+            position: absolute;
+            bottom: 17px;
+            left: 50%;
+            transform: translateX(-50%);
+            border: 8px solid transparent;
+            border-top-color: #2c3e50;
+            z-index: 2000;
+        }
+
+        .insight-title-with-icon {
+            display: flex;
+            align-items: center;
+        }
+    
+        .insights-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-top: 20px;
+        }
+
+        .insights-header {
+            font-size: 18px;
+            color: #0f5f4e;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .insight-item {
+            display: flex;
+            gap: 12px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid;
+            transition: all 0.2s;
+        }
+
+        .insight-item:hover {
+            background: #f0f4f3;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+
+        .insight-icon {
+            font-size: 20px;
+            font-weight: 700;
+            flex-shrink: 0;
+            color: #0f5f4e;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 95, 78, 0.1);
+            border-radius: 8px;
+        }
+
+        .insight-content {
+            flex: 1;
+        }
+
+        .insight-title {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .insight-title-with-icon {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .insight-text {
+            color: #666;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .modal-chart-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .modal-chart-header {
+            font-size: 18px;
+            color: #0f5f4e;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .modal-chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .detail-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .detail-card-header {
+            font-size: 16px;
+            color: #0f5f4e;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-icon {
+            width: 24px;
+            height: 24px;
+            background: #0f5f4e;
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
     </style>
 </head>
 <body>
@@ -514,7 +740,7 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Total Emissions Overview</h3>
-                        <div class="info-icon" data-info="Aggregated Scope 1, 2, 3 emissions across all suppliers. Click any card to drill down into detailed supplier breakdown.">ⓘ</div>
+                        <div class="info-icon" data-info="Aggregated Scope 1, 2, and 3 emissions across all suppliers. Scope 1: Direct emissions from owned sources. Scope 2: Indirect emissions from purchased energy. Scope 3: All other value chain emissions. Click any card to drill down into detailed supplier-level breakdown.">ⓘ</div>
                     </div>
                     <div class="widget-icon">Σ</div>
                 </div>
@@ -552,6 +778,7 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">High-Risk Suppliers</h3>
+                        <div class="info-icon" data-info="Suppliers flagged for critical environmental compliance issues including high emissions levels, missing sustainability certifications, failed audits, or regulatory violations. These require immediate attention, remediation plans, and close monitoring. Priority should be given to developing corrective action plans and setting improvement milestones.">ⓘ</div>
                     </div>
                     <div class="widget-icon">!</div>
                 </div>
@@ -585,6 +812,7 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Top Performing Suppliers</h3>
+                        <div class="info-icon" data-info="Suppliers ranked by overall sustainability score (out of 100) based on multiple factors: carbon emissions intensity, renewable energy usage percentage, waste management practices, water efficiency, and environmental certifications held. Top performers serve as benchmarks and best practice examples. Trends show improvement (↑), decline (↓), or stability (→) compared to previous quarter.">ⓘ</div>
                     </div>
                     <div class="widget-icon">★</div>
                 </div>
@@ -621,6 +849,7 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Certification Status</h3>
+                        <div class="info-icon" data-info="Distribution of environmental certifications across supplier base. ISO 14001 indicates formal environmental management systems. Carbon Neutral shows commitment to net-zero emissions through reduction and offsetting. In Progress indicates active certification efforts. No Certification highlights suppliers needing engagement to begin formal sustainability programs.">ⓘ</div>
                     </div>
                     <div class="widget-icon">C</div>
                 </div>
@@ -634,6 +863,7 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Key Performance Indicators</h3>
+                        <div class="info-icon" data-info="Core sustainability metrics aggregated across entire supplier network. Total Suppliers tracks coverage of assessment program. Average Sustainability Score (out of 100) shows overall performance. Certified Suppliers percentage indicates formalization of environmental practices. YoY (Year-over-Year) Improvement demonstrates progress trajectory and effectiveness of engagement initiatives.">ⓘ</div>
                     </div>
                     <div class="widget-icon">M</div>
                 </div>
@@ -662,6 +892,7 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Carbon Footprint Trends</h3>
+                        <div class="info-icon" data-info="Monthly carbon emissions trends showing increase, decrease, or stability. Red arrows indicate emissions growth requiring intervention. Green arrows show successful reduction efforts. Click any supplier for detailed Scope 1, 2, 3 emissions analysis.">ⓘ</div>
                     </div>
                     <div class="widget-icon">T</div>
                 </div>
@@ -695,6 +926,7 @@
                 <div class="widget-header">
                     <div class="widget-title-section">
                         <h3 class="widget-title">Renewable Energy Adoption</h3>
+                        <div class="info-icon" data-info="Percentage of operations powered by renewable energy sources (solar, wind, hydro, geothermal) for top suppliers. Shows progress toward clean energy transition and Scope 2 emission reduction. Higher percentages indicate advanced sustainability practices. Targets typically aim for 80-100% renewable energy. This metric directly impacts carbon footprint and demonstrates climate commitment.">ⓘ</div>
                     </div>
                     <div class="widget-icon">E</div>
                 </div>
@@ -1030,14 +1262,18 @@
             let insightsHtml = '<div class="insight-item" style="border-left-color: ' + info.color + ';">';
             insightsHtml += '<div class="insight-icon">' + info.icon + '</div>';
             insightsHtml += '<div class="insight-content">';
-            insightsHtml += '<div class="insight-title">' + scopeTitles[scopeType] + ' Overview</div>';
+            insightsHtml += '<div class="insight-title-with-icon">' + scopeTitles[scopeType] + ' Overview';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="This section provides an overview of ' + scopeTitles[scopeType].toLowerCase() + ' and explains what types of emissions are included in this category according to GHG Protocol standards.">ⓘ</span>';
+            insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">' + info.desc + '</div>';
             insightsHtml += '</div></div>';
             
             insightsHtml += '<div class="insight-item" style="border-left-color: #dc3545;">';
             insightsHtml += '<div class="insight-icon">↑</div>';
             insightsHtml += '<div class="insight-content">';
-            insightsHtml += '<div class="insight-title">Highest Emitter: ' + highestEmitter.name + '</div>';
+            insightsHtml += '<div class="insight-title-with-icon">Highest Emitter: ' + highestEmitter.name;
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="The supplier with the highest emissions in this category. This identifies priority areas for engagement and emission reduction initiatives. Focus improvement efforts here for maximum impact.">ⓘ</span>';
+            insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">';
             if (scopeType === 'all') {
                 insightsHtml += 'Total emissions: ' + highestEmitter.total.toLocaleString() + ' t CO2e (' + ((highestEmitter.total/totalEmissions)*100).toFixed(1) + '% of total)';
@@ -1049,7 +1285,9 @@
             insightsHtml += '<div class="insight-item" style="border-left-color: #28a745;">';
             insightsHtml += '<div class="insight-icon">↓</div>';
             insightsHtml += '<div class="insight-content">';
-            insightsHtml += '<div class="insight-title">Lowest Emitter: ' + lowestEmitter.name + '</div>';
+            insightsHtml += '<div class="insight-title-with-icon">Lowest Emitter: ' + lowestEmitter.name;
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="The supplier with the lowest emissions in this category. Use as a benchmark and best practice example. Study their strategies for potential replication across other suppliers.">ⓘ</span>';
+            insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">';
             if (scopeType === 'all') {
                 insightsHtml += 'Total emissions: ' + lowestEmitter.total.toLocaleString() + ' t CO2e (' + ((lowestEmitter.total/totalEmissions)*100).toFixed(1) + '% of total)';
@@ -1061,7 +1299,9 @@
             insightsHtml += '<div class="insight-item" style="border-left-color: #0f5f4e;">';
             insightsHtml += '<div class="insight-icon">📊</div>';
             insightsHtml += '<div class="insight-content">';
-            insightsHtml += '<div class="insight-title">Statistical Summary</div>';
+            insightsHtml += '<div class="insight-title-with-icon">Statistical Summary';
+            insightsHtml += '<span class="insight-info-icon" data-tooltip="Key metrics aggregated across all suppliers: average emissions help identify outliers, total suppliers shows data coverage, and combined emissions represents your complete footprint in this category.">ⓘ</span>';
+            insightsHtml += '</div>';
             insightsHtml += '<div class="insight-text">Average emissions per supplier: ' + avgEmissions.toLocaleString() + ' t CO2e | ';
             insightsHtml += 'Total suppliers analyzed: ' + suppliersList.length + ' | ';
             insightsHtml += 'Combined emissions: ' + totalEmissions.toLocaleString() + ' t CO2e</div>';
@@ -1075,7 +1315,9 @@
                 insightsHtml += '<div class="insight-item" style="border-left-color: #17a085;">';
                 insightsHtml += '<div class="insight-icon">🎯</div>';
                 insightsHtml += '<div class="insight-content">';
-                insightsHtml += '<div class="insight-title">Scope Distribution</div>';
+                insightsHtml += '<div class="insight-title-with-icon">Scope Distribution';
+                insightsHtml += '<span class="insight-info-icon" data-tooltip="Shows the percentage breakdown across Scope 1 (direct), Scope 2 (energy), and Scope 3 (value chain) emissions. Use this to prioritize reduction strategies based on where your emissions are concentrated.">ⓘ</span>';
+                insightsHtml += '</div>';
                 insightsHtml += '<div class="insight-text">Scope 1 represents ' + ((scope1Total/totalEmissions)*100).toFixed(1) + '%, ';
                 insightsHtml += 'Scope 2 represents ' + ((scope2Total/totalEmissions)*100).toFixed(1) + '%, ';
                 insightsHtml += 'Scope 3 represents ' + ((scope3Total/totalEmissions)*100).toFixed(1) + '% of total emissions.</div>';
